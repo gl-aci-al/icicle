@@ -1,0 +1,57 @@
+{
+  "manifest_version": 3,
+  "name": "Icicle",
+  "version": "0.1.0",
+  "description": "no bs twitter extension",
+  "action": {
+    "default_title": "Icicle",
+    "default_popup": "src/popup.html",
+    "default_icon": {
+      "16": "assets/logo.png",
+      "32": "assets/logo.png",
+      "48": "assets/logo.png",
+      "128": "assets/logo.png"
+    }
+  },
+  "icons": {
+    "16": "assets/logo.png",
+    "32": "assets/logo.png",
+    "48": "assets/logo.png",
+    "128": "assets/logo.png"
+  },
+  "background": {
+    "service_worker": "src/background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://x.com/*"
+      ],
+      "js": [
+        "src/content.js"
+      ],
+      "css": [
+        "src/content.css"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "permissions": [
+    "storage"
+  ],
+  "host_permissions": [
+    "https://x.com/*"
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "assets/icicle.svg",
+        "assets/Chirp-*.woff2"
+      ],
+      "matches": [
+        "https://x.com/*"
+      ]
+    }
+  ]
+}

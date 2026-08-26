@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Icicle / X</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+
+<body>
+  <main class="popup">
+    <div class="brand">
+      <span class="logo" data-icicle-logo-slot aria-hidden="true"></span>
+      <div>
+        <h1>Icicle</h1>
+        <p class="subtitle">Extension's working!</p>
+      </div>
+    </div>
+
+    <p class="hint">Go try it out by visiting X (or twitter)</p>
+    <div class="status" aria-live="polite">
+      <span class="status-dot" aria-hidden="true"></span>
+      <span id="status-text">Extension is ready</span>
+    </div>
+    <small id="version"></small>
+  </main>
+  <script src="popup.js"></script>
+</body>
+
+</html>
