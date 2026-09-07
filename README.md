@@ -23,7 +23,6 @@ no bullshit twitter extension - mute, customize and truly make it your own.
 - Bug with the "blur until clicked" for images - I needed to get this extension out ASAP, and cannot bother to fix it. Currently semi-functional.
 # Contact & Support
 - Discord server: work in progress
-- Add me on Discord: @mestonia
 - Website for Icicle: work in progress
 - Email me at hi@gl.aci.al
 
