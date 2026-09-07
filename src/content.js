@@ -572,7 +572,8 @@
     if (compact) {
       if (!element.hasAttribute(originalAttribute)) element.setAttribute(originalAttribute, element.textContent.trim());
       const original = element.getAttribute(originalAttribute);
-      element.textContent = original ? `${original.charAt(0).toUpperCase()}...` : "...";
+      const text = original ? `${original.charAt(0).toUpperCase()}...` : "...";
+      if (element.textContent !== text) element.textContent = text;
     } else if (element.hasAttribute(originalAttribute)) {
       element.textContent = element.getAttribute(originalAttribute);
       element.removeAttribute(originalAttribute);
@@ -665,7 +666,8 @@
     const whitelisted = settings.whitelistAccounts.includes(username);
     if (existing) {
       const label = existing.querySelector("[data-icicle-whitelist-label]");
-      if (label) label.textContent = whitelisted ? "Remove from whitelist" : "Add to whitelist";
+      const text = whitelisted ? "Remove from whitelist" : "Add to whitelist";
+      if (label && label.textContent !== text) label.textContent = text;
       existing.setAttribute("aria-label", `${whitelisted ? "Remove from" : "Add to"} whitelist @${username}`);
       return;
     }
@@ -990,10 +992,6 @@
     accentScanTimer = setTimeout(applyAccentTargets, 16);
   }
 
-  function enforceDocumentTitle() {
-    if (document.title !== "Icicle / X") document.title = "Icicle / X";
-  }
-
   function applySettings() {
     applyFontAsset();
     applyLogoAsset();
@@ -1007,7 +1005,6 @@
       appliedTheme = theme;
       storeSettings({ icicleTheme: theme });
     }
-    enforceDocumentTitle();
   }
 
   function scheduleSync() {
@@ -1032,11 +1029,6 @@
     subtree: true,
     attributes: true,
     attributeFilter: ["style", "class"]
-  });
-  new MutationObserver(enforceDocumentTitle).observe(document.head, {
-    childList: true,
-    subtree: true,
-    characterData: true
   });
   bindImageReveal();
   getStoredSettings().then((stored) => {
