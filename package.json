@@ -1,0 +1,23 @@
+{
+  "name": "icicle",
+  "version": "1.0.0",
+  "description": "no bullshit twitter extension",
+  "homepage": "https://github.com/gl-aci-al/icicle#readme",
+  "bugs": {
+    "url": "https://github.com/gl-aci-al/icicle/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gl-aci-al/icicle.git"
+  },
+  "license": "ISC",
+  "author": "glacial",
+  "type": "module",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "build:chrome": "node scripts/build.js chrome",
+    "build:firefox": "node scripts/build.js firefox"
+  }
+}
