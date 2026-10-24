@@ -1,0 +1,490 @@
+@font-face {
+  font-family: IcicleChirp;
+  src: url("chrome-extension://__MSG_@@extension_id__/assets/Chirp-Regular.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: IcicleChirp;
+  src: url("chrome-extension://__MSG_@@extension_id__/assets/Chirp-Medium.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: IcicleChirp;
+  src: url("chrome-extension://__MSG_@@extension_id__/assets/Chirp-Bold.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: IcicleChirp;
+  src: url("chrome-extension://__MSG_@@extension_id__/assets/Chirp-Heavy.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: IcicleChirpHeavy500;
+  src: url("chrome-extension://__MSG_@@extension_id__/assets/Chirp-Heavy.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: IcicleChirpBold;
+  src: url("chrome-extension://__MSG_@@extension_id__/assets/Chirp-Bold.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: IcicleChirpRegularFace;
+  src: url("chrome-extension://__MSG_@@extension_id__/assets/Chirp-Regular.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+[class~="r-1vtznih"] {
+  background-color: var(--icicle-accent-replacement-dark, #1a88d3) !important;
+}
+
+[data-icicle-streamer-avatar-image] {
+  overflow: hidden !important;
+  border-radius: 50% !important;
+  background-color: var(--icicle-streamer-accent) !important;
+  background-image: none !important;
+}
+
+[data-icicle-streamer-avatar-image] [style*="background-image"] {
+  background-color: var(--icicle-streamer-accent) !important;
+  background-image: none !important;
+}
+
+[data-icicle-streamer-avatar-image] img {
+  display: none !important;
+}
+
+article[data-icicle-filtered="warn"] {
+  position: relative !important;
+}
+
+article[data-icicle-filtered="warn"]:not([data-icicle-revealed]) > *:not([data-icicle-filter-warning]) {
+  filter: blur(7px) !important;
+  user-select: none !important;
+}
+
+article[data-icicle-filtered="warn"]:not([data-icicle-revealed]) > [data-icicle-filter-warning] {
+  position: absolute;
+  z-index: 10;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 16px;
+  border-radius: inherit;
+  background: rgb(15 20 25 / 88%);
+  color: #fff;
+  font-family: IcicleChirp, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
+  line-height: 1.4;
+  text-align: center;
+}
+
+article[data-icicle-filtered="warn"] > [data-icicle-filter-warning][hidden] {
+  display: none !important;
+}
+
+.icicle-filter-warning__title {
+  font-family: IcicleChirpBold, IcicleChirp, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 20px;
+  font-synthesis: none;
+}
+
+.icicle-filter-warning__reason {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  font-family: IcicleChirp, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 20px;
+  font-synthesis: none;
+}
+
+.icicle-filter-warning__show {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  padding: 0 16px;
+  border: 1px solid transparent;
+  border-radius: 9999px;
+  background: rgb(255 255 255 / 25%);
+  color: #fff;
+  font-family: IcicleChirpBold, IcicleChirp, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 16px;
+  font-synthesis: none;
+  transition: background-color 0.2s ease;
+  cursor: pointer;
+}
+
+.icicle-filter-warning__show:hover {
+  background: rgb(209 209 209 / 25%);
+}
+
+.icicle-filter-warning__show:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+[data-icicle-media-blurred] {
+  filter: blur(30px) !important;
+  transform: scale(1.06) !important;
+  cursor: pointer !important;
+}
+
+[data-icicle-media-host][data-icicle-media-position="relative"] {
+  position: relative !important;
+}
+
+[data-icicle-media-warning] {
+  position: absolute !important;
+  z-index: 20 !important;
+  inset: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 12px 16px !important;
+  background: transparent !important;
+  color: rgb(255 255 255) !important;
+  font-family: IcicleChirp, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+  text-align: left !important;
+}
+
+[data-icicle-media-warning][data-state="hidden"] {
+  background-color: rgb(0 0 0 / 50%) !important;
+}
+
+.icicle-media-warning__panel {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  gap: 12px !important;
+  width: min(100%, 400px) !important;
+  padding: 16px !important;
+  border-radius: 16px !important;
+  background: transparent !important;
+  color: rgb(255 255 255) !important;
+  backdrop-filter: none !important;
+}
+
+.icicle-media-warning__text {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  gap: 0 !important;
+  width: 100% !important;
+  color: rgb(255 255 255) !important;
+  text-align: left !important;
+  user-select: text !important;
+  -webkit-user-select: text !important;
+}
+
+.icicle-media-warning__icon {
+  display: block !important;
+  width: 24px !important;
+  height: 24px !important;
+  flex: none !important;
+  align-self: center !important;
+  margin-bottom: 12px !important;
+  fill: rgb(255 255 255) !important;
+}
+
+.icicle-media-warning__title {
+  color: rgb(255 255 255) !important;
+  font-family: IcicleChirpBold, IcicleChirp, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  line-height: 20px !important;
+  margin-bottom: 12px !important;
+  font-synthesis: none !important;
+  user-select: text !important;
+  -webkit-user-select: text !important;
+}
+
+.icicle-media-warning__copy {
+  color: rgb(255 255 255) !important;
+  font-family: IcicleChirp, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+  font-size: 15px !important;
+  font-weight: 400 !important;
+  line-height: 20px !important;
+  text-align: left !important;
+  user-select: text !important;
+  -webkit-user-select: text !important;
+}
+
+.icicle-media-warning__actions {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-end !important;
+  align-self: flex-end !important;
+  justify-content: flex-end !important;
+  gap: 8px !important;
+}
+
+.icicle-media-button {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  height: 32px !important;
+  padding: 0 16px !important;
+  border: 1px solid rgb(0 0 0 / 0%) !important;
+  border-radius: 9999px !important;
+  color: rgb(255 255 255) !important;
+  font-family: IcicleChirpRegularFace, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+  font-size: 14px !important;
+  line-height: normal !important;
+  font-weight: 400 !important;
+  font-synthesis: none !important;
+  backdrop-filter: blur(4px) !important;
+  transition: background-color 0.2s ease !important;
+  cursor: pointer !important;
+}
+
+.icicle-media-button--show {
+  align-self: flex-end !important;
+  margin-top: 0 !important;
+  border-color: rgb(0 0 0 / 0%) !important;
+  background-color: rgb(255 255 255 / 25%) !important;
+  font-family: IcicleChirpBold, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+  font-size: 14px !important;
+  line-height: 16px !important;
+  font-weight: 700 !important;
+}
+
+.icicle-media-button--hide {
+  margin: 0 !important;
+  background-color: rgb(15 20 25 / 75%) !important;
+  font-family: IcicleChirpBold, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+  font-size: 14px !important;
+  line-height: 16px !important;
+  font-weight: 700 !important;
+}
+
+.icicle-media-button--show:hover {
+  background-color: rgb(209 209 209 / 25%) !important;
+}
+
+.icicle-media-button--hide:hover {
+  background-color: rgb(39 44 48 / 75%) !important;
+}
+
+.icicle-media-button:focus-visible {
+  outline: 2px solid rgb(255 255 255);
+  outline-offset: 2px;
+}
+
+.icicle-media-button[hidden] {
+  display: none !important;
+}
+
+[data-icicle-media-warning][data-state="visible"] {
+  align-items: flex-start !important;
+  justify-content: flex-end !important;
+  padding: 8px !important;
+  pointer-events: none !important;
+}
+
+[data-icicle-media-warning][data-state="visible"] .icicle-media-warning__actions,
+[data-icicle-media-warning][data-state="visible"] .icicle-media-button {
+  pointer-events: auto !important;
+}
+
+[data-icicle-media-warning][data-state="visible"] .icicle-media-warning__panel {
+  align-items: flex-end !important;
+  gap: 0 !important;
+  width: auto !important;
+  padding: 0 !important;
+}
+
+[data-icicle-media-warning][data-state="visible"] .icicle-media-warning__text {
+  display: none !important;
+}
+
+[data-icicle-media-warning][data-state="visible"] .icicle-media-warning__actions {
+  align-self: flex-end !important;
+}
+
+[data-icicle-menu-item] {
+  cursor: pointer !important;
+}
+
+[data-icicle-menu-item]:hover,
+[data-icicle-menu-item]:focus-visible {
+  background-color: rgba(255, 255, 255, 0.03) !important;
+}
+
+[data-icicle-menu-item]:focus-visible {
+  outline: 2px solid currentColor !important;
+  outline-offset: -2px !important;
+}
+
+#icicle-account-dialog {
+  position: fixed !important;
+  inset: 50% auto auto 50% !important;
+  width: min(440px, calc(100vw - 32px)) !important;
+  max-width: none !important;
+  max-height: min(620px, calc(100vh - 32px)) !important;
+  margin: 0 !important;
+  padding: 24px !important;
+  transform: translate(-50%, -50%) !important;
+  border: 1px solid rgb(255 255 255 / 12%) !important;
+  border-radius: 16px !important;
+  background: #16181c !important;
+  color: #e7e9ea !important;
+  box-shadow: 0 12px 40px rgb(0 0 0 / 45%) !important;
+  font-family: IcicleChirp, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+  font-size: 14px !important;
+  line-height: 1.4 !important;
+}
+
+#icicle-account-dialog::backdrop {
+  background: rgb(0 0 0 / 55%) !important;
+}
+
+#icicle-account-dialog[open] {
+  display: block !important;
+}
+
+.icicle-account-dialog__header {
+  display: flex !important;
+  align-items: flex-start !important;
+  justify-content: space-between !important;
+  gap: 16px !important;
+  margin-bottom: 20px !important;
+}
+
+.icicle-account-dialog__title {
+  margin: 0 !important;
+  color: #e7e9ea !important;
+  font-family: IcicleChirp, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+  font-size: 20px !important;
+  font-weight: 700 !important;
+  line-height: 1.25 !important;
+}
+
+.icicle-account-dialog__close {
+  display: grid !important;
+  place-items: center !important;
+  width: 32px !important;
+  height: 32px !important;
+  flex: none !important;
+  margin: -6px -6px 0 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 50% !important;
+  background: transparent !important;
+  color: #e7e9ea !important;
+  font-family: IcicleChirp, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+  font-size: 24px !important;
+  font-weight: 400 !important;
+  line-height: 1 !important;
+  cursor: pointer !important;
+}
+
+.icicle-account-dialog__close:hover {
+  background-color: rgb(255 255 255 / 10%) !important;
+}
+
+.icicle-account-dialog__items {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 20px !important;
+}
+
+#icicle-account-dialog .icicle-about-message {
+  padding: 12px 16px !important;
+  color: rgb(113 118 123) !important;
+  font-family: IcicleChirp, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+  font-size: 15px !important;
+  font-weight: 400 !important;
+  line-height: 20px !important;
+  font-synthesis: none !important;
+}
+
+#icicle-account-dialog .icicle-about-row {
+  display: flex !important;
+  flex: none !important;
+  flex-direction: column !important;
+  box-sizing: border-box !important;
+  padding: 12px 16px !important;
+}
+
+#icicle-account-dialog .icicle-about-row__main {
+  display: flex !important;
+  align-items: center !important;
+  width: 100% !important;
+}
+
+#icicle-account-dialog .icicle-about-row__icon {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 24px !important;
+  height: 24px !important;
+  flex: none !important;
+  margin: 0 16px 0 0 !important;
+  padding: 0 !important;
+  color: #e7e9ea !important;
+}
+
+#icicle-account-dialog .icicle-about-row__icon svg {
+  display: block !important;
+  width: 24px !important;
+  height: 24px !important;
+  flex: none !important;
+  fill: currentColor !important;
+}
+
+#icicle-account-dialog .icicle-about-row__body {
+  display: flex !important;
+  flex: 1 1 auto !important;
+  flex-direction: column !important;
+  min-width: 0 !important;
+}
+
+#icicle-account-dialog .icicle-about-row__label {
+  color: #e7e9ea !important;
+  font-family: IcicleChirp, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+  font-size: 15px !important;
+  font-weight: 400 !important;
+  line-height: 20px !important;
+  font-synthesis: none !important;
+  overflow-wrap: anywhere !important;
+}
+
+#icicle-account-dialog .icicle-about-row__value {
+  color: rgb(113 118 123) !important;
+  font-family: IcicleChirp, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+  font-size: 15px !important;
+  font-weight: 400 !important;
+  line-height: 20px !important;
+  font-synthesis: none !important;
+  overflow-wrap: anywhere !important;
+}
+

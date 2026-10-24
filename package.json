@@ -1,0 +1,7 @@
+{
+  "name": "icicle",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A quality-of-life extension for X",
+  "type": "module"
+}

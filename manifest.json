@@ -1,0 +1,51 @@
+{
+  "manifest_version": 3,
+  "name": "Icicle",
+  "version": "0.1.0",
+  "description": "A quality-of-life extension for X.",
+  "host_permissions": [
+    "https://x.com/*",
+    "https://twitter.com/*"
+  ],
+  "permissions": [
+    "storage"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://x.com/*",
+        "https://twitter.com/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "css": [
+        "streamer.css"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "assets/icicle.svg",
+        "assets/Chirp-Regular.woff2",
+        "assets/Chirp-Medium.woff2",
+        "assets/Chirp-Bold.woff2",
+        "assets/Chirp-Heavy.woff2"
+      ],
+      "matches": [
+        "https://x.com/*",
+        "https://twitter.com/*"
+      ]
+    }
+  ],
+  "icons": {
+    "16": "icons/icon-16.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+  "action": {
+    "default_title": "Icicle"
+  }
+}
