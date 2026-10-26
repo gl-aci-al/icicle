@@ -9,11 +9,14 @@ const fontUrls = {
   bold: chrome.runtime.getURL("assets/Chirp-Bold.woff2"),
   heavy: chrome.runtime.getURL("assets/Chirp-Heavy.woff2")
 };
+const copyLinkDomains = new Set(["fixupx.com", "fxtwitter.com", "vxtwitter.com"]);
 const defaults = {
   accentColor: "#1d9bf0",
   customAccentEnabled: true,
   showToasts: true,
   twitterLogo: false,
+  copyLinkEmbedEnabled: false,
+  copyLinkDomain: "fixupx.com",
   hidePremium: false,
   hideTrends: false,
   hideWhoToFollow: false,
@@ -211,6 +214,8 @@ shadow.innerHTML = `
       <section class="section" aria-labelledby="page-title">
         <h3 class="section-title" id="page-title">X page</h3>
         <div class="setting-row"><div class="setting-copy"><label class="setting-name" for="twitter-logo">Twitter logo</label><span class="description" id="twitter-logo-help">Replaces the matching X logo with the classic Twitter mark.</span></div><label class="switch"><input id="twitter-logo" type="checkbox" aria-describedby="twitter-logo-help"><span class="track"></span></label></div>
+        <div class="setting-row"><div class="setting-copy"><label class="setting-name" for="copy-link-embed-enabled">Copy links through an embed service</label><span class="description" id="copy-link-embed-enabled-help">Changes X’s Copy link result to the selected service.</span></div><label class="switch"><input id="copy-link-embed-enabled" type="checkbox" aria-describedby="copy-link-embed-enabled-help"><span class="track"></span></label></div>
+        <label class="field" for="copy-link-domain"><span class="field-label">Embed service</span><span class="description" id="copy-link-domain-help">Choose the domain used for copied post links.</span><select class="text-input" id="copy-link-domain" aria-describedby="copy-link-domain-help"><option value="fixupx.com">FixupX</option><option value="fxtwitter.com">FxTwitter</option><option value="vxtwitter.com">VxTwitter</option></select></label>
       </section>
       <section class="section" aria-labelledby="hiders-title">
         <h3 class="section-title" id="hiders-title">Hide on X</h3>
@@ -443,6 +448,9 @@ function renderSettings() {
   launcher.style.backgroundColor = activeAccent;
   icon.style.filter = contrastingInk(activeAccent) === "#000000" ? "brightness(0)" : "none";
   shadow.querySelector("#twitter-logo").checked = settings.twitterLogo;
+  shadow.querySelector("#copy-link-embed-enabled").checked = settings.copyLinkEmbedEnabled;
+  shadow.querySelector("#copy-link-domain").value = settings.copyLinkDomain;
+  shadow.querySelector("#copy-link-domain").disabled = !settings.copyLinkEmbedEnabled;
   shadow.querySelector("#hide-premium").checked = settings.hidePremium;
   shadow.querySelector("#hide-trends").checked = settings.hideTrends;
   shadow.querySelector("#hide-who-to-follow").checked = settings.hideWhoToFollow;
@@ -507,6 +515,8 @@ function normalizeSettings(value) {
     customAccentEnabled: candidate.customAccentEnabled === undefined ? defaults.customAccentEnabled : Boolean(candidate.customAccentEnabled),
     showToasts: candidate.showToasts === undefined ? defaults.showToasts : Boolean(candidate.showToasts),
     twitterLogo: Boolean(candidate.twitterLogo),
+    copyLinkEmbedEnabled: Boolean(candidate.copyLinkEmbedEnabled),
+    copyLinkDomain: copyLinkDomains.has(candidate.copyLinkDomain) ? candidate.copyLinkDomain : defaults.copyLinkDomain,
     hidePremium: Boolean(candidate.hidePremium),
     hideTrends: Boolean(candidate.hideTrends),
     hideWhoToFollow: Boolean(candidate.hideWhoToFollow),
@@ -591,8 +601,8 @@ function readNightMode() {
 
 function applyTheme() {
   const mode = readNightMode();
-  if (mode === "2") host.dataset.theme = "dark";
-  else if (mode === "0") host.dataset.theme = "light";
+  const pageTheme = document.documentElement.dataset.theme;
+  host.dataset.theme = pageTheme === "dark" || mode === "2" ? "dark" : "light";
 }
 
 const hiddenElementDisplays = new WeakMap();
@@ -622,6 +632,14 @@ function setElementHidden(element, key, hidden) {
 
 function sidebarCard(element, fallback = element) {
   return element?.closest('[class~="r-kemksi"]') ?? fallback;
+}
+
+function premiumPromoCard(link) {
+  for (let element = link.parentElement; element; element = element.parentElement) {
+    const text = element.textContent.normalize("NFKC").replace(/[’‘]/g, "'").toLowerCase();
+    if (text.includes("you aren't verified yet")) return element;
+  }
+  return null;
 }
 
 function queryMutationScope(root, selector) {
@@ -1132,6 +1150,40 @@ document.addEventListener("click", (event) => {
   if (tweet) lastAccountMenuContext = { trigger, username: tweetIdentity(tweet).username, at: Date.now() };
 }, true);
 
+let lastCopyLinkSource = null;
+
+function statusLinkForTweet(tweet) {
+  const link = [...tweet.querySelectorAll('a[href*="/status/"]')].find((element) => /\/status\/\d+/.test(element.getAttribute("href") ?? ""));
+  return link ? new URL(link.href, location.origin) : null;
+}
+
+function copyLinkSource() {
+  if (lastCopyLinkSource && Date.now() - lastCopyLinkSource.at < 15000) return lastCopyLinkSource.url;
+  return /\/status\/\d+/.test(location.pathname) ? new URL(location.href) : null;
+}
+
+document.addEventListener("click", (event) => {
+  const target = event.target instanceof Element ? event.target : event.target?.parentElement;
+  const shareButton = target?.closest('article[data-testid="tweet"] button[aria-label="Share post"]');
+  if (!shareButton) return;
+  const tweet = shareButton.closest('article[data-testid="tweet"]');
+  const url = tweet && statusLinkForTweet(tweet);
+  if (url) lastCopyLinkSource = { url, at: Date.now() };
+}, true);
+
+document.addEventListener("click", (event) => {
+  if (!settings.copyLinkEmbedEnabled) return;
+  const target = event.target instanceof Element ? event.target : event.target?.parentElement;
+  const item = target?.closest('[role="menuitem"]');
+  if (!item || item.textContent.trim() !== "Copy link") return;
+  const source = copyLinkSource();
+  if (!source) return;
+  source.hostname = settings.copyLinkDomain;
+  queueMicrotask(() => {
+    navigator.clipboard.writeText(source.href).catch(() => {});
+  });
+});
+
 document.addEventListener("keydown", (event) => {
   const target = event.target instanceof Element ? event.target : event.target?.parentElement;
   const item = target?.closest("[data-icicle-menu-item]");
@@ -1203,7 +1255,11 @@ function applyStreamerMode(root = document) {
 }
 
 function applyPageHiders(root = document, resetBlocklistReveals = false, resetMediaReveals = false) {
-  const premium = queryMutationScope(root, 'aside[aria-label="Subscribe to Premium"]').map((element) => sidebarCard(element, element));
+  const premium = new Set(queryMutationScope(root, 'aside[aria-label="Subscribe to Premium"]').map((element) => sidebarCard(element, element)));
+  for (const link of queryMutationScope(root, 'a[href="/i/premium_sign_up"]')) {
+    const card = premiumPromoCard(link);
+    if (card) premium.add(sidebarCard(card, card));
+  }
   for (const element of premium) setElementHidden(element, "premium", settings.hidePremium);
 
   const trends = queryMutationScope(root, "h1, h2")
@@ -1451,6 +1507,14 @@ shadow.querySelector("#twitter-logo").addEventListener("change", async (event) =
   if (settings.twitterLogo) replaceTwitterLogos();
   else restoreTwitterLogos();
 });
+shadow.querySelector("#copy-link-embed-enabled").addEventListener("change", async (event) => {
+  settings.copyLinkEmbedEnabled = event.currentTarget.checked;
+  await saveSettings();
+});
+shadow.querySelector("#copy-link-domain").addEventListener("change", async (event) => {
+  settings.copyLinkDomain = copyLinkDomains.has(event.currentTarget.value) ? event.currentTarget.value : defaults.copyLinkDomain;
+  await saveSettings();
+});
 for (const [id, key] of [["hide-premium", "hidePremium"], ["hide-trends", "hideTrends"], ["hide-who-to-follow", "hideWhoToFollow"], ["hide-footer", "hideFooter"], ["hide-chat", "hideChat"], ["hide-grok", "hideGrok"], ["hide-live-on-x", "hideLiveOnX"], ["hide-sidebar-logo", "hideSidebarLogo"], ["hide-sidebar-home", "hideSidebarHome"], ["hide-sidebar-explore", "hideSidebarExplore"], ["hide-sidebar-notifications", "hideSidebarNotifications"], ["hide-sidebar-chat", "hideSidebarChat"], ["hide-sidebar-calls", "hideSidebarCalls"], ["hide-sidebar-grok", "hideSidebarGrok"], ["hide-sidebar-history", "hideSidebarHistory"], ["hide-sidebar-creator-studio", "hideSidebarCreatorStudio"], ["hide-sidebar-premium", "hideSidebarPremium"], ["hide-sidebar-profile", "hideSidebarProfile"], ["hide-sidebar-more", "hideSidebarMore"], ["hide-sidebar-post", "hideSidebarPost"]]) {
   shadow.querySelector(`#${id}`).addEventListener("change", async (event) => {
     settings[key] = event.currentTarget.checked;
@@ -1686,6 +1750,8 @@ async function initialize() {
 }
 
 initialize();
+
+new MutationObserver(applyTheme).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
 
 if (globalThis.cookieStore) {
   globalThis.cookieStore.addEventListener("change", (event) => {
