@@ -9,7 +9,47 @@ const fontUrls = {
   bold: chrome.runtime.getURL("assets/Chirp-Bold.woff2"),
   heavy: chrome.runtime.getURL("assets/Chirp-Heavy.woff2")
 };
-const copyLinkDomains = new Set(["fixupx.com", "fxtwitter.com", "vxtwitter.com"]);
+const builtInCopyLinkDomains = new Set(["fixupx.com", "fxtwitter.com", "vxtwitter.com"]);
+const copyLinkDomainLabels = { "fixupx.com": "FixupX", "fxtwitter.com": "FxTwitter", "vxtwitter.com": "VxTwitter" };
+
+function normalizeEmbedDomain(value) {
+  if (typeof value !== "string") return "";
+  const input = value.trim().toLowerCase();
+  if (!input) return "";
+  try {
+    const url = new URL(/^[a-z][a-z0-9+.-]*:\/\//.test(input) ? input : `https://${input}`);
+    if (url.protocol !== "http:" && url.protocol !== "https:") return "";
+    const host = url.hostname.replace(/\.$/, "");
+    const labels = host.split(".");
+    if (!host.includes(".") || host.length > 253 || !/^[a-z0-9.-]+$/.test(host) || labels.some((label) => !label || label.length > 63 || label.startsWith("-") || label.endsWith("-"))) return "";
+    return host;
+  } catch {
+    return "";
+  }
+}
+
+function normalizeCustomEmbedServices(value) {
+  if (!Array.isArray(value)) return [];
+  const seen = new Set();
+  const services = [];
+  for (const item of value) {
+    const domain = normalizeEmbedDomain(typeof item === "string" ? item : item?.domain);
+    if (!domain || builtInCopyLinkDomains.has(domain) || seen.has(domain)) continue;
+    const label = typeof item?.label === "string" ? item.label.trim().replace(/\s+/g, " ").slice(0, 60) : "";
+    seen.add(domain);
+    services.push({ domain, label: label || domain });
+  }
+  return services;
+}
+
+function copyLinkServices() {
+  const services = Object.entries(copyLinkDomainLabels).map(([domain, label]) => ({ domain, label }));
+  for (const service of settings.customEmbedServices) {
+    if (!builtInCopyLinkDomains.has(service.domain)) services.push(service);
+  }
+  return services;
+}
+
 const defaults = {
   accentColor: "#1d9bf0",
   customAccentEnabled: true,
@@ -17,6 +57,7 @@ const defaults = {
   twitterLogo: false,
   copyLinkEmbedEnabled: false,
   copyLinkDomain: "fixupx.com",
+  customEmbedServices: [],
   hidePremium: false,
   hideTrends: false,
   hideWhoToFollow: false,
@@ -24,6 +65,8 @@ const defaults = {
   hideChat: false,
   hideGrok: false,
   hideLiveOnX: false,
+  hidePaidPartnerships: false,
+  hideAiPosts: false,
   streamerMode: false,
   streamerHideAvatar: true,
   streamerMaskUsername: true,
@@ -96,6 +139,7 @@ shadow.innerHTML = `
     .description{display:block;margin-top:4px;color:var(--muted);font-size:13px;line-height:1.4}
     .setting-row{display:flex;align-items:center;justify-content:space-between;gap:16px}
     .setting-row+.setting-row{margin-top:14px}
+    .toast-toggle{margin-bottom:14px}
     .setting-copy{min-width:0}
     .setting-name{font-weight:700}
     .switch{position:relative;flex:none;width:42px;height:24px}
@@ -123,7 +167,7 @@ shadow.innerHTML = `
     .preset-swatch:disabled{cursor:not-allowed;opacity:.4}
     .chevron{width:7px;height:7px;flex:none;border-right:1.5px solid var(--muted);border-bottom:1.5px solid var(--muted);transform:rotate(45deg);transition:transform .15s}
     .accent-picker.open .color-trigger .chevron{transform:rotate(225deg)}
-    .reaction-dropdown.open .dropdown-trigger .chevron{transform:translateY(-1px) rotate(225deg)}
+    .reaction-dropdown.open .dropdown-trigger .chevron,.copy-link-dropdown.open .dropdown-trigger .chevron{transform:translateY(-1px) rotate(225deg)}
     .color-popup,.dropdown-menu{position:absolute;z-index:20;top:calc(100% + 7px);right:0;width:280px;max-width:min(280px,calc(100vw - 48px));padding:11px;border:1px solid var(--border);border-radius:12px;background:var(--surface);color:var(--text);box-shadow:0 4px 16px #0002,0 1px 3px #0001}
     .color-popup[hidden],.dropdown-menu[hidden]{display:none}
     .saturation{position:relative;width:100%;height:140px;overflow:hidden;border-radius:8px;background:hsl(var(--hue),100%,50%);cursor:crosshair;touch-action:none}
@@ -150,14 +194,17 @@ shadow.innerHTML = `
     .picker-action{padding:6px 0;border:0;background:transparent;color:var(--muted);font-size:12px}
     .picker-action.primary{padding:7px 14px;border-radius:999px;background:var(--text);color:var(--surface);font-weight:700}
     .dropdown-wrap{position:relative;margin-top:7px}
-    .reaction-dropdown{position:relative}
+    .reaction-dropdown,.copy-link-dropdown{position:relative}
     .dropdown-trigger{width:100%;min-height:44px;padding:10px 12px;border-radius:999px;text-align:left}
+    .dropdown-trigger:disabled{cursor:not-allowed;opacity:.45}
+    .dropdown-trigger:disabled:hover{background:var(--surface)}
     .dropdown-trigger .chevron{margin-right:3px;transform:translateY(-1px) rotate(45deg)}
     .dropdown-value{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
     .dropdown-menu{top:calc(100% + 6px);bottom:auto;width:100%;max-width:none;padding:5px;border-radius:12px}
     .dropdown-option{display:flex;align-items:center;width:100%;min-height:38px;margin:2px 0;padding:8px 10px;gap:10px;border:0;border-radius:8px;background:var(--surface-hover);color:var(--text);text-align:left;white-space:normal;cursor:pointer}
     .dropdown-option:hover,.dropdown-option[aria-selected="true"]{background:var(--divider)}
     .option-check{margin-left:auto;color:var(--accent);font-weight:700}
+    .option-check svg{display:block;width:16px;height:16px}
     .dropdown-option[aria-selected="false"] .option-check{visibility:hidden}
     .color-value{display:block;margin-top:7px;color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums}
     .field{display:block;margin-top:12px}
@@ -170,6 +217,18 @@ shadow.innerHTML = `
     .text-input:focus,.word-input:focus{border-color:var(--accent)}
     .panel textarea#words:focus-visible{outline:2px solid var(--accent);outline-offset:1px;box-shadow:none;border-color:transparent}
     .text-input::placeholder,.word-input::placeholder{color:var(--muted);opacity:.8}
+    .custom-embed-form{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr) auto;gap:8px}
+    .custom-embed-form .text-input{min-width:0}
+    .custom-embed-form .secondary{white-space:nowrap}
+    .custom-embed-list{display:grid;gap:6px;margin-top:10px}
+    .custom-embed-list:empty{display:none}
+    .custom-embed-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px;border:1px solid var(--border);border-radius:10px;background:var(--surface)}
+    .custom-embed-item__copy{min-width:0}
+    .custom-embed-item__name{font-weight:700;overflow-wrap:anywhere}
+    .custom-embed-item__domain{color:var(--muted);font-size:12px;overflow-wrap:anywhere}
+    .custom-embed-remove{flex:none;min-height:32px;padding:6px 10px;border:1px solid var(--border);border-radius:999px;background:transparent;color:var(--text);font-weight:700}
+    .custom-embed-remove:hover{background:var(--surface-hover)}
+    .custom-embed-status{display:block;min-height:16px;margin-top:6px;font-size:12px}
     .metadata-fields[hidden]{display:none}
     .button-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
     .secondary{min-height:38px;padding:8px 10px;border:1px solid var(--border);border-radius:999px;background:var(--surface);color:var(--text);font-weight:700}
@@ -186,8 +245,8 @@ shadow.innerHTML = `
     <div class="body">
       <section class="section" aria-labelledby="appearance-title">
         <h3 class="section-title" id="appearance-title">Appearance</h3>
-        <div class="setting-row accent-toggle"><div class="setting-copy"><label class="setting-name" for="custom-accent-enabled">Use custom accent color</label><span class="description" id="custom-accent-help">When on, your color is used across Icicle. When off, Icicle uses X blue.</span></div><label class="switch"><input id="custom-accent-enabled" type="checkbox" aria-describedby="custom-accent-help"><span class="track"></span></label></div>
-        <div class="setting-row"><div class="setting-copy"><label class="setting-name" for="show-toasts">Opening messages</label><span class="description" id="show-toasts-help">Show a random message when Icicle settings opens.</span></div><label class="switch"><input id="show-toasts" type="checkbox" aria-describedby="show-toasts-help"><span class="track"></span></label></div>
+        <div class="setting-row accent-toggle"><div class="setting-copy"><label class="setting-name" for="custom-accent-enabled">Use custom accent color</label><span class="description" id="custom-accent-help">Changes the default X blue to any color you pick.</span></div><label class="switch"><input id="custom-accent-enabled" type="checkbox" aria-describedby="custom-accent-help"><span class="track"></span></label></div>
+        <div class="setting-row toast-toggle"><div class="setting-copy"><label class="setting-name" for="show-toasts">Toasts</label><span class="description" id="show-toasts-help">Shows a random toast message at the top</span></div><label class="switch"><input id="show-toasts" type="checkbox" aria-describedby="show-toasts-help"><span class="track"></span></label></div>
         <div class="color-row">
           <div class="setting-copy"><span class="setting-name">Accent color</span><span class="description">Choose any color.</span></div>
           <div class="accent-picker" id="accent-picker">
@@ -207,15 +266,26 @@ shadow.innerHTML = `
       </section>
       <section class="section" aria-labelledby="streamer-title">
         <h3 class="section-title" id="streamer-title">Streamer mode</h3>
-        <div class="setting-row"><div class="setting-copy"><label class="setting-name" for="streamer-mode">Enable streamer mode</label><span class="description" id="streamer-mode-help">Mask your account details in the sidebar account switcher.</span></div><label class="switch"><input id="streamer-mode" type="checkbox" aria-describedby="streamer-mode-help"><span class="track"></span></label></div>
-        <div class="setting-row"><div class="setting-copy"><label class="setting-name" for="streamer-hide-avatar">Hide profile picture</label><span class="description" id="streamer-hide-avatar-help">Replace your sidebar and post composer profile pictures with your accent color.</span></div><label class="switch"><input id="streamer-hide-avatar" type="checkbox" aria-describedby="streamer-hide-avatar-help"><span class="track"></span></label></div>
-        <div class="setting-row"><div class="setting-copy"><label class="setting-name" for="streamer-mask-username">Mask username</label><span class="description" id="streamer-mask-username-help">Shorten your displayed name and handle to their first character.</span></div><label class="switch"><input id="streamer-mask-username" type="checkbox" aria-describedby="streamer-mask-username-help"><span class="track"></span></label></div>
+        <div class="setting-row"><div class="setting-copy"><label class="setting-name" for="streamer-mode">Enable streamer mode</label><span class="description" id="streamer-mode-help">Mask your account details.</span></div><label class="switch"><input id="streamer-mode" type="checkbox" aria-describedby="streamer-mode-help"><span class="track"></span></label></div>
+        <div class="setting-row"><div class="setting-copy"><label class="setting-name" for="streamer-hide-avatar">Hide profile picture</label><span class="description" id="streamer-hide-avatar-help">Hides your profile picture.</span></div><label class="switch"><input id="streamer-hide-avatar" type="checkbox" aria-describedby="streamer-hide-avatar-help"><span class="track"></span></label></div>
+        <div class="setting-row"><div class="setting-copy"><label class="setting-name" for="streamer-mask-username">Mask username</label><span class="description" id="streamer-mask-username-help">Truncates your username and only shows the initial.</span></div><label class="switch"><input id="streamer-mask-username" type="checkbox" aria-describedby="streamer-mask-username-help"><span class="track"></span></label></div>
       </section>
       <section class="section" aria-labelledby="page-title">
         <h3 class="section-title" id="page-title">X page</h3>
-        <div class="setting-row"><div class="setting-copy"><label class="setting-name" for="twitter-logo">Twitter logo</label><span class="description" id="twitter-logo-help">Replaces the matching X logo with the classic Twitter mark.</span></div><label class="switch"><input id="twitter-logo" type="checkbox" aria-describedby="twitter-logo-help"><span class="track"></span></label></div>
+        <div class="setting-row"><div class="setting-copy"><label class="setting-name" for="twitter-logo">Twitter logo</label><span class="description" id="twitter-logo-help">Replaces the X logo back to Larry the Bird.</span></div><label class="switch"><input id="twitter-logo" type="checkbox" aria-describedby="twitter-logo-help"><span class="track"></span></label></div>
         <div class="setting-row"><div class="setting-copy"><label class="setting-name" for="copy-link-embed-enabled">Copy links through an embed service</label><span class="description" id="copy-link-embed-enabled-help">Changes X’s Copy link result to the selected service.</span></div><label class="switch"><input id="copy-link-embed-enabled" type="checkbox" aria-describedby="copy-link-embed-enabled-help"><span class="track"></span></label></div>
-        <label class="field" for="copy-link-domain"><span class="field-label">Embed service</span><span class="description" id="copy-link-domain-help">Choose the domain used for copied post links.</span><select class="text-input" id="copy-link-domain" aria-describedby="copy-link-domain-help"><option value="fixupx.com">FixupX</option><option value="fxtwitter.com">FxTwitter</option><option value="vxtwitter.com">VxTwitter</option></select></label>
+        <div class="field"><span class="field-label" id="copy-link-domain-label">Embed service</span><span class="description" id="copy-link-domain-help">Choose the domain used for copied post links.</span><div class="dropdown-wrap"><div class="copy-link-dropdown" id="copy-link-domain-dropdown"><button class="dropdown-trigger" id="copy-link-domain-trigger" type="button" aria-labelledby="copy-link-domain-label copy-link-domain-value" aria-describedby="copy-link-domain-help" aria-haspopup="listbox" aria-expanded="false"><span class="dropdown-value" id="copy-link-domain-value">FixupX</span><span class="chevron" aria-hidden="true"></span></button><div class="dropdown-menu" id="copy-link-domain-menu" role="listbox" aria-labelledby="copy-link-domain-label" hidden></div></div></div></div>
+        <div class="field">
+          <span class="field-label" id="custom-embed-label">Custom embed services</span>
+          <span class="description" id="custom-embed-help">Add another embed service domain. Its display name is optional.</span>
+          <div class="custom-embed-form">
+            <input id="custom-embed-name" class="text-input" type="text" maxlength="60" placeholder="Name (optional)" aria-label="Custom embed service name">
+            <input id="custom-embed-domain" class="text-input" type="text" maxlength="253" placeholder="embed.example.com" aria-label="Custom embed service domain" aria-describedby="custom-embed-help">
+            <button id="add-custom-embed" class="secondary" type="button">Add</button>
+          </div>
+          <div id="custom-embed-list" class="custom-embed-list" role="list"></div>
+          <span class="description custom-embed-status" id="custom-embed-status" role="status"></span>
+        </div>
       </section>
       <section class="section" aria-labelledby="hiders-title">
         <h3 class="section-title" id="hiders-title">Hide on X</h3>
@@ -226,6 +296,11 @@ shadow.innerHTML = `
         <div class="setting-row"><div class="setting-copy"><label class="setting-name" for="hide-chat">Chat drawer button</label><span class="description" id="hide-chat-help">Hide the floating chat drawer button, separate from the Chat sidebar link.</span></div><label class="switch"><input id="hide-chat" type="checkbox" aria-describedby="hide-chat-help"><span class="track"></span></label></div>
         <div class="setting-row"><div class="setting-copy"><label class="setting-name" for="hide-grok">Grok buttons</label><span class="description" id="hide-grok-help">Hide the Grok corner button and Grok actions on posts.</span></div><label class="switch"><input id="hide-grok" type="checkbox" aria-describedby="hide-grok-help"><span class="track"></span></label></div>
         <div class="setting-row"><div class="setting-copy"><label class="setting-name" for="hide-live-on-x">Live on X</label><span class="description" id="hide-live-on-x-help">Hide the Live on X Spaces card.</span></div><label class="switch"><input id="hide-live-on-x" type="checkbox" aria-describedby="hide-live-on-x-help"><span class="track"></span></label></div>
+      </section>
+      <section class="section" aria-labelledby="post-blockers-title">
+        <h3 class="section-title" id="post-blockers-title">Post blockers</h3>
+        <div class="setting-row"><div class="setting-copy"><label class="setting-name" for="hide-paid-partnerships">Paid partnerships</label><span class="description" id="hide-paid-partnerships-help">Hide posts labeled by X or the author as paid partnerships.</span></div><label class="switch"><input id="hide-paid-partnerships" type="checkbox" aria-describedby="hide-paid-partnerships-help"><span class="track"></span></label></div>
+        <div class="setting-row"><div class="setting-copy"><label class="setting-name" for="hide-ai-posts">AI-generated posts</label><span class="description" id="hide-ai-posts-help">Hide posts labeled as made with AI by X or the author. This can produce false flags.</span></div><label class="switch"><input id="hide-ai-posts" type="checkbox" aria-describedby="hide-ai-posts-help"><span class="track"></span></label></div>
       </section>
       <section class="section" aria-labelledby="sidebar-hiders-title">
         <h3 class="section-title" id="sidebar-hiders-title">Sidebar items</h3>
@@ -257,7 +332,7 @@ shadow.innerHTML = `
         <div class="setting-row"><div class="setting-copy"><label class="setting-name" for="blur-media">Blur images and videos</label><span class="description" id="blur-media-help">Click a blurred image or video to reveal it.</span></div><label class="switch"><input id="blur-media" type="checkbox" aria-describedby="blur-media-help"><span class="track"></span></label></div>
         <label class="field" for="whitelist"><span class="field-label">Whitelist usernames</span><span class="description" id="whitelist-help">One username per line, with or without @.</span><textarea class="word-input" id="whitelist" aria-describedby="whitelist-help" placeholder="username"></textarea></label>
         <div class="setting-row"><div class="setting-copy"><label class="setting-name" for="whitelist-bypass-all">Whitelist bypasses media blur too</label><span class="description" id="whitelist-bypass-all-help">When off, whitelisted users still follow the media blur setting.</span></div><label class="switch"><input id="whitelist-bypass-all" type="checkbox" aria-describedby="whitelist-bypass-all-help"><span class="track"></span></label></div>
-        <div class="field"><span class="field-label" id="reaction-label">Blocklist reaction</span><span class="description" id="reaction-help">Warn blurs the post, shows the matching reason, and adds a Show post button. Remove hides the post completely.</span><div class="dropdown-wrap"><div class="reaction-dropdown" id="reaction-dropdown"><button class="dropdown-trigger" id="reaction-trigger" type="button" aria-labelledby="reaction-label reaction-value" aria-describedby="reaction-help" aria-haspopup="listbox" aria-expanded="false"><span class="dropdown-value" id="reaction-value">Warn</span><span class="chevron" aria-hidden="true"></span></button><div class="dropdown-menu" id="reaction-menu" role="listbox" aria-labelledby="reaction-label" hidden><button class="dropdown-option" type="button" role="option" data-value="warn" aria-selected="true" tabindex="-1">Blur and warn<span class="option-check" aria-hidden="true">✓</span></button><button class="dropdown-option" type="button" role="option" data-value="remove" aria-selected="false" tabindex="-1">Hide tweet completely<span class="option-check" aria-hidden="true">✓</span></button></div></div></div></div>
+        <div class="field"><span class="field-label" id="reaction-label">Blocklist reaction</span><span class="description" id="reaction-help">Warn blurs the post, shows the matching reason, and adds a Show post button. Remove hides the post completely.</span><div class="dropdown-wrap"><div class="reaction-dropdown" id="reaction-dropdown"><button class="dropdown-trigger" id="reaction-trigger" type="button" aria-labelledby="reaction-label reaction-value" aria-describedby="reaction-help" aria-haspopup="listbox" aria-expanded="false"><span class="dropdown-value" id="reaction-value">Warn</span><span class="chevron" aria-hidden="true"></span></button><div class="dropdown-menu" id="reaction-menu" role="listbox" aria-labelledby="reaction-label" hidden><button class="dropdown-option" type="button" role="option" data-value="warn" aria-selected="true" tabindex="-1">Blur and warn<span class="option-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 13 4 4L19 7"/></svg></span></button><button class="dropdown-option" type="button" role="option" data-value="remove" aria-selected="false" tabindex="-1">Hide tweet completely<span class="option-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 13 4 4L19 7"/></svg></span></button></div></div></div></div>
       </section>
       <section class="section" aria-labelledby="transfer-title">
         <h3 class="section-title" id="transfer-title">Import and export</h3>
@@ -355,6 +430,68 @@ function updateReactionDropdown() {
   trigger.setAttribute("aria-expanded", String(!menu.hidden));
 }
 
+function createCopyLinkOption(service) {
+  const option = document.createElement("button");
+  option.type = "button";
+  option.className = "dropdown-option";
+  option.setAttribute("role", "option");
+  option.dataset.value = service.domain;
+  option.tabIndex = -1;
+  option.textContent = service.label;
+  const check = document.createElement("span");
+  check.className = "option-check";
+  check.setAttribute("aria-hidden", "true");
+  check.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 13 4 4L19 7"/></svg>`;
+  option.append(check);
+  return option;
+}
+
+function updateCopyLinkDropdown() {
+  const trigger = shadow.querySelector("#copy-link-domain-trigger");
+  const menu = shadow.querySelector("#copy-link-domain-menu");
+  const dropdown = shadow.querySelector("#copy-link-domain-dropdown");
+  const services = copyLinkServices();
+  menu.replaceChildren(...services.map(createCopyLinkOption));
+  for (const option of menu.querySelectorAll("[role=option]")) {
+    option.setAttribute("aria-selected", String(option.dataset.value === settings.copyLinkDomain));
+  }
+  const selected = services.find((service) => service.domain === settings.copyLinkDomain);
+  shadow.querySelector("#copy-link-domain-value").textContent = selected?.label ?? copyLinkDomainLabels[defaults.copyLinkDomain];
+  trigger.disabled = !settings.copyLinkEmbedEnabled;
+  if (!settings.copyLinkEmbedEnabled) {
+    dropdown.classList.remove("open");
+    menu.hidden = true;
+  }
+  trigger.setAttribute("aria-expanded", String(!menu.hidden && settings.copyLinkEmbedEnabled));
+}
+
+function renderCustomEmbedServices() {
+  shadow.querySelector("#custom-embed-status").textContent = "";
+  const list = shadow.querySelector("#custom-embed-list");
+  list.replaceChildren(...settings.customEmbedServices.map((service) => {
+    const item = document.createElement("div");
+    item.className = "custom-embed-item";
+    item.setAttribute("role", "listitem");
+    const copy = document.createElement("div");
+    copy.className = "custom-embed-item__copy";
+    const name = document.createElement("div");
+    name.className = "custom-embed-item__name";
+    name.textContent = service.label;
+    const domain = document.createElement("div");
+    domain.className = "custom-embed-item__domain";
+    domain.textContent = service.domain;
+    copy.append(name, domain);
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "custom-embed-remove";
+    remove.dataset.domain = service.domain;
+    remove.textContent = "Remove";
+    remove.setAttribute("aria-label", `Remove ${service.label}`);
+    item.append(copy, remove);
+    return item;
+  }));
+}
+
 let pickerHsv = [204, 0.879, 0.941];
 let accentSaveTimer;
 
@@ -449,8 +586,8 @@ function renderSettings() {
   icon.style.filter = contrastingInk(activeAccent) === "#000000" ? "brightness(0)" : "none";
   shadow.querySelector("#twitter-logo").checked = settings.twitterLogo;
   shadow.querySelector("#copy-link-embed-enabled").checked = settings.copyLinkEmbedEnabled;
-  shadow.querySelector("#copy-link-domain").value = settings.copyLinkDomain;
-  shadow.querySelector("#copy-link-domain").disabled = !settings.copyLinkEmbedEnabled;
+  updateCopyLinkDropdown();
+  renderCustomEmbedServices();
   shadow.querySelector("#hide-premium").checked = settings.hidePremium;
   shadow.querySelector("#hide-trends").checked = settings.hideTrends;
   shadow.querySelector("#hide-who-to-follow").checked = settings.hideWhoToFollow;
@@ -458,6 +595,8 @@ function renderSettings() {
   shadow.querySelector("#hide-chat").checked = settings.hideChat;
   shadow.querySelector("#hide-grok").checked = settings.hideGrok;
   shadow.querySelector("#hide-live-on-x").checked = settings.hideLiveOnX;
+  shadow.querySelector("#hide-paid-partnerships").checked = settings.hidePaidPartnerships;
+  shadow.querySelector("#hide-ai-posts").checked = settings.hideAiPosts;
   shadow.querySelector("#streamer-mode").checked = settings.streamerMode;
   shadow.querySelector("#streamer-hide-avatar").checked = settings.streamerHideAvatar;
   shadow.querySelector("#streamer-mask-username").checked = settings.streamerMaskUsername;
@@ -510,13 +649,16 @@ function normalizeSettings(value) {
   const color = /^#[0-9a-f]{6}$/i.test(candidate.accentColor) ? candidate.accentColor : defaults.accentColor;
   const words = Array.isArray(candidate.words) ? candidate.words.filter((word) => typeof word === "string").map((word) => word.trim()).filter(Boolean) : defaults.words;
   const whitelist = Array.isArray(candidate.whitelist) ? candidate.whitelist.filter((name) => typeof name === "string").map((name) => name.trim().replace(/^@/, "").toLowerCase()).filter(Boolean) : defaults.whitelist;
+  const customEmbedServices = normalizeCustomEmbedServices(candidate.customEmbedServices);
+  const copyLinkDomain = builtInCopyLinkDomains.has(candidate.copyLinkDomain) || customEmbedServices.some((service) => service.domain === candidate.copyLinkDomain) ? candidate.copyLinkDomain : defaults.copyLinkDomain;
   return {
     accentColor: color,
     customAccentEnabled: candidate.customAccentEnabled === undefined ? defaults.customAccentEnabled : Boolean(candidate.customAccentEnabled),
     showToasts: candidate.showToasts === undefined ? defaults.showToasts : Boolean(candidate.showToasts),
     twitterLogo: Boolean(candidate.twitterLogo),
     copyLinkEmbedEnabled: Boolean(candidate.copyLinkEmbedEnabled),
-    copyLinkDomain: copyLinkDomains.has(candidate.copyLinkDomain) ? candidate.copyLinkDomain : defaults.copyLinkDomain,
+    copyLinkDomain,
+    customEmbedServices,
     hidePremium: Boolean(candidate.hidePremium),
     hideTrends: Boolean(candidate.hideTrends),
     hideWhoToFollow: Boolean(candidate.hideWhoToFollow),
@@ -524,6 +666,8 @@ function normalizeSettings(value) {
     hideChat: Boolean(candidate.hideChat),
     hideGrok: Boolean(candidate.hideGrok),
     hideLiveOnX: Boolean(candidate.hideLiveOnX),
+    hidePaidPartnerships: Boolean(candidate.hidePaidPartnerships),
+    hideAiPosts: Boolean(candidate.hideAiPosts),
     streamerMode: Boolean(candidate.streamerMode),
     streamerHideAvatar: candidate.streamerHideAvatar === undefined ? defaults.streamerHideAvatar : Boolean(candidate.streamerHideAvatar),
     streamerMaskUsername: candidate.streamerMaskUsername === undefined ? defaults.streamerMaskUsername : Boolean(candidate.streamerMaskUsername),
@@ -635,7 +779,9 @@ function sidebarCard(element, fallback = element) {
 }
 
 function premiumPromoCard(link) {
-  for (let element = link.parentElement; element; element = element.parentElement) {
+  let element = link.parentElement;
+  for (let depth = 0; element && depth < 12; depth += 1, element = element.parentElement) {
+    if (element.matches('nav, header[role="banner"], main, [role="main"], [data-testid="primaryColumn"]')) return null;
     const text = element.textContent.normalize("NFKC").replace(/[’‘]/g, "'").toLowerCase();
     if (text.includes("you aren't verified yet")) return element;
   }
@@ -888,6 +1034,14 @@ function setTweetMediaBlur(tweet, blurred, resetReveals = false, textReason = nu
     updateMediaWarningControls(mediaHost, !hostMedia.some((element) => element.hasAttribute("data-icicle-media-blurred")), warning.dataset.reason);
   }
 }
+function tweetPostLabels(tweet) {
+  const labels = [...tweet.querySelectorAll("span, a")].filter((element) => element.closest('article[data-testid="tweet"]') === tweet && !element.closest('[data-testid="tweetText"]'));
+  return {
+    paid: labels.some((element) => element.tagName === "A" && (element.getAttribute("href") ?? "").includes("paid-partnerships-policy")) || labels.some((element) => element.textContent.trim() === "Paid partnership"),
+    ai: labels.some((element) => element.textContent.trim() === "Made with AI")
+  };
+}
+
 function applyBlocklist(root = document, resetReveals = false, resetMediaReveals = false) {
   for (const tweet of queryMutationScope(root, 'article[data-testid="tweet"]')) {
     if (tweet.parentElement?.closest('article[data-testid="tweet"]')) continue;
@@ -895,11 +1049,21 @@ function applyBlocklist(root = document, resetReveals = false, resetMediaReveals
     const isWhitelisted = identity.username && settings.whitelist.includes(identity.username);
     const matchReason = tweetBlockReason(tweet);
     const matched = Boolean(matchReason);
-    if (matched && settings.reaction === "remove") {
+    const labels = tweetPostLabels(tweet);
+    const labelBlocked = (settings.hidePaidPartnerships && labels.paid) || (settings.hideAiPosts && labels.ai);
+    if (labelBlocked) {
+      setElementHidden(tweet, "blocked-tweet", false);
+      setElementHidden(tweet, "post-label", true);
+      tweet.removeAttribute("data-icicle-filtered");
+      tweet.removeAttribute("data-icicle-revealed");
+      syncTweetFilterWarning(tweet, null);
+    } else if (matched && settings.reaction === "remove") {
+      setElementHidden(tweet, "post-label", false);
       tweet.removeAttribute("data-icicle-filtered");
       tweet.removeAttribute("data-icicle-revealed");
       setElementHidden(tweet, "blocked-tweet", true);
     } else {
+      setElementHidden(tweet, "post-label", false);
       setElementHidden(tweet, "blocked-tweet", false);
       if (matched) {
         tweet.setAttribute("data-icicle-filtered", "warn");
@@ -912,8 +1076,8 @@ function applyBlocklist(root = document, resetReveals = false, resetMediaReveals
       }
       if (settings.reaction === "remove") syncTweetFilterWarning(tweet, null);
     }
-    const mediaBlurred = settings.blurMedia && !(isWhitelisted && settings.whitelistBypassAll);
-    setTweetMediaBlur(tweet, mediaBlurred, resetMediaReveals, matchReason);
+    const mediaBlurred = !labelBlocked && settings.blurMedia && !(isWhitelisted && settings.whitelistBypassAll);
+    setTweetMediaBlur(tweet, mediaBlurred, resetMediaReveals, labelBlocked ? null : matchReason);
   }
 }
 
@@ -928,6 +1092,7 @@ let lastAccountMenuContext = null;
 const aboutAccountQueryId = "TzOG2twZEfhr9KmClvVVqA";
 const aboutAccountBearer = "AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA";
 const aboutAccountMenuIcon = "M13.5 8.5c0 .83-.67 1.5-1.5 1.5s-1.5-.67-1.5-1.5S11.17 7 12 7s1.5.67 1.5 1.5zM13 17v-5h-2v5h2zm-1 5.25c5.66 0 10.25-4.59 10.25-10.25S17.66 1.75 12 1.75 1.75 6.34 1.75 12 6.34 22.25 12 22.25zM20.25 12c0 4.56-3.69 8.25-8.25 8.25S3.75 16.56 3.75 12 7.44 3.75 12 3.75s8.25 3.69 8.25 8.25z";
+const aboutWarningIcon = "M12 2C6.486 2 2 6.486 2 12s4.486 10 10 10 10-4.486 10-10S17.514 2 12 2zm0 18c-4.411 0-8-3.589-8-8s3.589-8 8-8 8 3.589 8 8-3.589 8-8 8zm-1-13h2v7h-2V7zm0 9h2v2h-2v-2z";
 const aboutAccountIcons = {
   joined: "M7 4V3h2v1h6V3h2v1h1.5C19.89 4 21 5.12 21 6.5v12c0 1.38-1.11 2.5-2.5 2.5h-13C4.12 21 3 19.88 3 18.5v-12C3 5.12 4.12 4 5.5 4H7zm0 2H5.5c-.27 0-.5.22-.5.5v12c0 .28.23.5.5.5h13c.28 0 .5-.22.5-.5v-12c0-.28-.22-.5-.5-.5H17v1h-2V6H9v1H7V6zm0 6h2v-2H7v2zm0 4h2v-2H7v2zm4-4h2v-2h-2v2zm0 4h2v-2h-2v2zm4-4h2v-2h-2v2z",
   basedIn: "M12 7c-1.93 0-3.5 1.57-3.5 3.5S10.07 14 12 14s3.5-1.57 3.5-3.5S13.93 7 12 7zm0 5c-.827 0-1.5-.673-1.5-1.5S11.173 9 12 9s1.5.673 1.5 1.5S12.827 12 12 12zm0-10c-4.687 0-8.5 3.813-8.5 8.5 0 5.967 7.621 11.116 7.945 11.332l.555.37.555-.37c.324-.216 7.945-5.365 7.945-11.332C20.5 5.813 16.687 2 12 2zm0 17.77c-1.665-1.241-6.5-5.196-6.5-9.27C5.5 6.916 8.416 4 12 4s6.5 2.916 6.5 6.5c0 4.073-4.835 8.028-6.5 9.27z",
@@ -946,13 +1111,22 @@ function formatAboutDate(value) {
   return date.toLocaleString("en-US", { month: "long", year: "numeric" });
 }
 
-function createAboutRow(iconPath, label, value) {
+function createAboutRow(iconPath, label, value, warningText = "") {
   const row = document.createElement("div");
   row.className = "icicle-about-row css-g5y9jx r-1wtj0ep r-16x9es5 r-1mmae3n r-1ny4l3l";
   row.innerHTML = `<div class="icicle-about-row__main css-g5y9jx r-1awozwy r-18u37iz r-16y2uox"><div class="icicle-about-row__icon css-g5y9jx r-1awozwy r-1777fci r-1prj4y5 r-1472mwg r-lrsllp"><svg viewBox="0 0 24 24" aria-hidden="true" class="r-4qtqp9 r-yyyyoo r-bnwqim r-lrvibr r-m6rgpd r-1nao33i r-1472mwg r-1me0s30 r-7v430y r-lrsllp"><g><path d="${iconPath}"></path></g></svg></div><div class="icicle-about-row__body css-g5y9jx r-16y2uox r-1wbh5a2"><div dir="ltr" class="icicle-about-row__label css-146c3p1 r-bcqeeo r-1ttztb7 r-qvutc0 r-37j5jr r-a023e6 r-rjixqe r-16dba41"><span class="css-1jxf684 r-bcqeeo r-1ttztb7 r-qvutc0 r-poiln3"></span></div><div dir="ltr" class="icicle-about-row__value css-146c3p1 r-bcqeeo r-1ttztb7 r-qvutc0 r-37j5jr r-a023e6 r-rjixqe r-16dba41"><span class="css-1jxf684 r-bcqeeo r-1ttztb7 r-qvutc0 r-poiln3"></span></div></div></div>`;
   const spans = row.querySelectorAll("span");
   spans[0].textContent = label;
   spans[1].textContent = value;
+  if (warningText) {
+    const warning = document.createElement("span");
+    warning.className = "icicle-about-warning";
+    warning.setAttribute("role", "img");
+    warning.setAttribute("aria-label", warningText);
+    warning.title = warningText;
+    warning.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${aboutWarningIcon}"></path></svg>`;
+    row.querySelector(".icicle-about-row__label").append(warning);
+  }
   return row;
 }
 
@@ -969,7 +1143,8 @@ function renderAboutAccount(result) {
   const rows = [];
   const joined = formatAboutDate(result?.core?.created_at);
   if (joined) rows.push(createAboutRow(aboutAccountIcons.joined, "Date joined", joined));
-  if (profile.account_based_in) rows.push(createAboutRow(aboutAccountIcons.basedIn, "Account based in", profile.account_based_in));
+  const locationWarning = profile.location_accurate === false || profile.created_country_accurate === false ? "This location may be inaccurate." : "";
+  if (profile.account_based_in) rows.push(createAboutRow(aboutAccountIcons.basedIn, "Account based in", profile.account_based_in, locationWarning));
   const changes = profile.username_changes;
   if (changes && Number(changes.count) > 0) {
     const count = Number(changes.count);
@@ -1162,6 +1337,28 @@ function copyLinkSource() {
   return /\/status\/\d+/.test(location.pathname) ? new URL(location.href) : null;
 }
 
+async function writeClipboardText(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    const field = document.createElement("textarea");
+    field.value = text;
+    field.setAttribute("readonly", "");
+    field.style.cssText = "position:fixed;top:-9999px;opacity:0";
+    document.documentElement.append(field);
+    field.select();
+    let copied = false;
+    try {
+      copied = document.execCommand("copy");
+    } catch {
+      copied = false;
+    }
+    field.remove();
+    return copied;
+  }
+}
+
 document.addEventListener("click", (event) => {
   const target = event.target instanceof Element ? event.target : event.target?.parentElement;
   const shareButton = target?.closest('article[data-testid="tweet"] button[aria-label="Share post"]');
@@ -1171,6 +1368,8 @@ document.addEventListener("click", (event) => {
   if (url) lastCopyLinkSource = { url, at: Date.now() };
 }, true);
 
+let copyLinkWriteTimer;
+
 document.addEventListener("click", (event) => {
   if (!settings.copyLinkEmbedEnabled) return;
   const target = event.target instanceof Element ? event.target : event.target?.parentElement;
@@ -1179,10 +1378,14 @@ document.addEventListener("click", (event) => {
   const source = copyLinkSource();
   if (!source) return;
   source.hostname = settings.copyLinkDomain;
-  queueMicrotask(() => {
-    navigator.clipboard.writeText(source.href).catch(() => {});
-  });
-});
+  source.search = "";
+  source.hash = "";
+  const href = source.href;
+  event.preventDefault();
+  writeClipboardText(href);
+  clearTimeout(copyLinkWriteTimer);
+  copyLinkWriteTimer = setTimeout(() => writeClipboardText(href), 120);
+}, true);
 
 document.addEventListener("keydown", (event) => {
   const target = event.target instanceof Element ? event.target : event.target?.parentElement;
@@ -1258,7 +1461,7 @@ function applyPageHiders(root = document, resetBlocklistReveals = false, resetMe
   const premium = new Set(queryMutationScope(root, 'aside[aria-label="Subscribe to Premium"]').map((element) => sidebarCard(element, element)));
   for (const link of queryMutationScope(root, 'a[href="/i/premium_sign_up"]')) {
     const card = premiumPromoCard(link);
-    if (card) premium.add(sidebarCard(card, card));
+    if (card) premium.add(card);
   }
   for (const element of premium) setElementHidden(element, "premium", settings.hidePremium);
 
@@ -1385,6 +1588,11 @@ shadow.addEventListener("keydown", (event) => {
       accentPickerTrigger.focus();
       return;
     }
+    if (copyLinkMenu && !copyLinkMenu.hidden) {
+      setCopyLinkDropdownOpen(false);
+      copyLinkTrigger.focus();
+      return;
+    }
     if (reactionMenu && !reactionMenu.hidden) {
       setReactionDropdownOpen(false);
       reactionTrigger.focus();
@@ -1509,13 +1717,10 @@ shadow.querySelector("#twitter-logo").addEventListener("change", async (event) =
 });
 shadow.querySelector("#copy-link-embed-enabled").addEventListener("change", async (event) => {
   settings.copyLinkEmbedEnabled = event.currentTarget.checked;
+  updateCopyLinkDropdown();
   await saveSettings();
 });
-shadow.querySelector("#copy-link-domain").addEventListener("change", async (event) => {
-  settings.copyLinkDomain = copyLinkDomains.has(event.currentTarget.value) ? event.currentTarget.value : defaults.copyLinkDomain;
-  await saveSettings();
-});
-for (const [id, key] of [["hide-premium", "hidePremium"], ["hide-trends", "hideTrends"], ["hide-who-to-follow", "hideWhoToFollow"], ["hide-footer", "hideFooter"], ["hide-chat", "hideChat"], ["hide-grok", "hideGrok"], ["hide-live-on-x", "hideLiveOnX"], ["hide-sidebar-logo", "hideSidebarLogo"], ["hide-sidebar-home", "hideSidebarHome"], ["hide-sidebar-explore", "hideSidebarExplore"], ["hide-sidebar-notifications", "hideSidebarNotifications"], ["hide-sidebar-chat", "hideSidebarChat"], ["hide-sidebar-calls", "hideSidebarCalls"], ["hide-sidebar-grok", "hideSidebarGrok"], ["hide-sidebar-history", "hideSidebarHistory"], ["hide-sidebar-creator-studio", "hideSidebarCreatorStudio"], ["hide-sidebar-premium", "hideSidebarPremium"], ["hide-sidebar-profile", "hideSidebarProfile"], ["hide-sidebar-more", "hideSidebarMore"], ["hide-sidebar-post", "hideSidebarPost"]]) {
+for (const [id, key] of [["hide-premium", "hidePremium"], ["hide-trends", "hideTrends"], ["hide-who-to-follow", "hideWhoToFollow"], ["hide-footer", "hideFooter"], ["hide-chat", "hideChat"], ["hide-grok", "hideGrok"], ["hide-live-on-x", "hideLiveOnX"], ["hide-paid-partnerships", "hidePaidPartnerships"], ["hide-ai-posts", "hideAiPosts"], ["hide-sidebar-logo", "hideSidebarLogo"], ["hide-sidebar-home", "hideSidebarHome"], ["hide-sidebar-explore", "hideSidebarExplore"], ["hide-sidebar-notifications", "hideSidebarNotifications"], ["hide-sidebar-chat", "hideSidebarChat"], ["hide-sidebar-calls", "hideSidebarCalls"], ["hide-sidebar-grok", "hideSidebarGrok"], ["hide-sidebar-history", "hideSidebarHistory"], ["hide-sidebar-creator-studio", "hideSidebarCreatorStudio"], ["hide-sidebar-premium", "hideSidebarPremium"], ["hide-sidebar-profile", "hideSidebarProfile"], ["hide-sidebar-more", "hideSidebarMore"], ["hide-sidebar-post", "hideSidebarPost"]]) {
   shadow.querySelector(`#${id}`).addEventListener("change", async (event) => {
     settings[key] = event.currentTarget.checked;
     await saveSettings();
@@ -1592,6 +1797,104 @@ reactionOptions.forEach((option, index) => {
 document.addEventListener("pointerdown", (event) => {
   if (!event.composedPath().includes(reactionDropdown)) setReactionDropdownOpen(false);
 });
+const copyLinkDropdown = shadow.querySelector("#copy-link-domain-dropdown");
+const copyLinkTrigger = shadow.querySelector("#copy-link-domain-trigger");
+const copyLinkMenu = shadow.querySelector("#copy-link-domain-menu");
+
+function setCustomEmbedStatus(message) {
+  shadow.querySelector("#custom-embed-status").textContent = message;
+}
+
+async function addCustomEmbedService() {
+  const nameInput = shadow.querySelector("#custom-embed-name");
+  const domainInput = shadow.querySelector("#custom-embed-domain");
+  const domain = normalizeEmbedDomain(domainInput.value);
+  if (!domain) {
+    setCustomEmbedStatus("Enter a valid domain, such as embed.example.com.");
+    domainInput.focus();
+    return;
+  }
+  if (builtInCopyLinkDomains.has(domain)) {
+    setCustomEmbedStatus("That service is already built in.");
+    domainInput.focus();
+    return;
+  }
+  const label = nameInput.value.trim().replace(/\s+/g, " ").slice(0, 60) || domain;
+  settings.customEmbedServices = [...settings.customEmbedServices.filter((service) => service.domain !== domain), { domain, label }];
+  settings.copyLinkDomain = domain;
+  nameInput.value = "";
+  domainInput.value = "";
+  await saveSettings();
+  updateCopyLinkDropdown();
+  renderCustomEmbedServices();
+  setCustomEmbedStatus(`Added ${label}.`);
+}
+
+shadow.querySelector("#add-custom-embed").addEventListener("click", addCustomEmbedService);
+for (const id of ["custom-embed-name", "custom-embed-domain"]) {
+  shadow.querySelector(`#${id}`).addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    addCustomEmbedService();
+  });
+}
+shadow.querySelector("#custom-embed-list").addEventListener("click", async (event) => {
+  const button = event.target instanceof Element ? event.target.closest(".custom-embed-remove") : null;
+  if (!button) return;
+  const service = settings.customEmbedServices.find((item) => item.domain === button.dataset.domain);
+  settings.customEmbedServices = settings.customEmbedServices.filter((item) => item.domain !== button.dataset.domain);
+  if (settings.copyLinkDomain === button.dataset.domain) settings.copyLinkDomain = defaults.copyLinkDomain;
+  await saveSettings();
+  updateCopyLinkDropdown();
+  renderCustomEmbedServices();
+  setCustomEmbedStatus(service ? `Removed ${service.label}.` : "Custom embed service removed.");
+});
+
+function setCopyLinkDropdownOpen(open) {
+  open = open && settings.copyLinkEmbedEnabled;
+  copyLinkDropdown.classList.toggle("open", open);
+  copyLinkMenu.hidden = !open;
+  copyLinkTrigger.setAttribute("aria-expanded", String(open));
+}
+
+copyLinkTrigger.addEventListener("click", () => setCopyLinkDropdownOpen(copyLinkMenu.hidden));
+copyLinkTrigger.addEventListener("keydown", (event) => {
+  if (event.key === "ArrowDown") {
+    event.preventDefault();
+    setCopyLinkDropdownOpen(true);
+    copyLinkMenu.querySelector(`[data-value="${settings.copyLinkDomain}"]`)?.focus();
+  }
+  if (event.key === "Escape") {
+    event.stopPropagation();
+    setCopyLinkDropdownOpen(false);
+  }
+});
+copyLinkMenu.addEventListener("click", async (event) => {
+  const option = event.target instanceof Element ? event.target.closest("[role=option]") : null;
+  if (!option) return;
+  settings.copyLinkDomain = option.dataset.value;
+  updateCopyLinkDropdown();
+  setCopyLinkDropdownOpen(false);
+  await saveSettings();
+  copyLinkTrigger.focus();
+});
+copyLinkMenu.addEventListener("keydown", (event) => {
+  const option = event.target instanceof Element ? event.target.closest("[role=option]") : null;
+  if (!option) return;
+  const options = [...copyLinkMenu.querySelectorAll("[role=option]")];
+  const index = options.indexOf(option);
+  if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+    event.preventDefault();
+    options[(index + (event.key === "ArrowDown" ? 1 : -1) + options.length) % options.length].focus();
+  } else if (event.key === "Escape") {
+    event.stopPropagation();
+    setCopyLinkDropdownOpen(false);
+    copyLinkTrigger.focus();
+  } else if (event.key === "Tab") setCopyLinkDropdownOpen(false);
+});
+document.addEventListener("pointerdown", (event) => {
+  if (!event.composedPath().includes(copyLinkDropdown)) setCopyLinkDropdownOpen(false);
+});
 shadow.querySelector("#include-metadata").addEventListener("change", async (event) => {
   settings.includeMetadata = event.currentTarget.checked;
   await saveSettings();
@@ -1611,7 +1914,7 @@ shadow.querySelector("#export-settings").addEventListener("click", () => {
   readStatus("Settings exported.");
 });
 shadow.querySelector("#export-blocklist").addEventListener("click", () => {
-  const payload = { format: "icicle-word-blocklist", version: 1, words: settings.words, reaction: settings.reaction, whitelist: settings.whitelist, filterOptions: { filterAuthorFields: settings.filterAuthorFields, filterRegex: settings.filterRegex, filterLeetspeak: settings.filterLeetspeak, filterSpacing: settings.filterSpacing, filterLookalikes: settings.filterLookalikes, filterUnicodeNormalization: settings.filterUnicodeNormalization, filterRepeatedCharacters: settings.filterRepeatedCharacters, filterUnusualUnicode: settings.filterUnusualUnicode, blurMedia: settings.blurMedia, whitelistBypassAll: settings.whitelistBypassAll }, metadata: exportMetadata() };
+  const payload = { format: "icicle-word-blocklist", version: 1, words: settings.words, reaction: settings.reaction, whitelist: settings.whitelist, filterOptions: { filterAuthorFields: settings.filterAuthorFields, filterRegex: settings.filterRegex, filterLeetspeak: settings.filterLeetspeak, filterSpacing: settings.filterSpacing, filterLookalikes: settings.filterLookalikes, filterUnicodeNormalization: settings.filterUnicodeNormalization, filterRepeatedCharacters: settings.filterRepeatedCharacters, filterUnusualUnicode: settings.filterUnusualUnicode, blurMedia: settings.blurMedia, hidePaidPartnerships: settings.hidePaidPartnerships, hideAiPosts: settings.hideAiPosts, copyLinkEmbedEnabled: settings.copyLinkEmbedEnabled, copyLinkDomain: settings.copyLinkDomain, customEmbedServices: settings.customEmbedServices, whitelistBypassAll: settings.whitelistBypassAll }, metadata: exportMetadata() };
   downloadJson("icicle-word-blocklist.json", payload);
   readStatus("Word blocklist exported.");
 });
@@ -1624,6 +1927,7 @@ shadow.querySelector("#settings-file").addEventListener("change", async (event) 
     const parsed = JSON.parse(await file.text());
     settings = normalizeSettings(parsed);
     await saveSettings();
+    renderSettings();
     applyPageHiders(document, true, true);
     if (settings.twitterLogo) replaceTwitterLogos();
     else restoreTwitterLogos();
@@ -1653,6 +1957,7 @@ shadow.querySelector("#blocklist-file").addEventListener("change", async (event)
     settings.words = words.map((word) => word.trim()).filter(Boolean);
     settings.reaction = reaction;
     await saveSettings();
+    renderSettings();
     applyPageHiders(document, true, true);
     readStatus("Word blocklist imported.");
   } catch {
@@ -1662,7 +1967,7 @@ shadow.querySelector("#blocklist-file").addEventListener("change", async (event)
 });
 
 const xBluePattern = /#1d9bf0\b|rgb\(\s*29\s*,\s*155\s*,\s*240\s*\)/gi;
-const xDarkBluePattern = /rgb\(\s*26\s*,\s*140\s*,\s*216\s*\)/gi;
+const xDarkBluePattern = /rgb\(\s*(?:26\s*,\s*140\s*,\s*216|23\s*,\s*124\s*,\s*192)\s*\)/gi;
 
 function replaceXBlue(value) {
   return value.replace(xBluePattern, "var(--icicle-accent-replacement)").replace(xDarkBluePattern, "var(--icicle-accent-replacement-dark)");

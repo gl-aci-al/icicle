@@ -478,6 +478,25 @@ article[data-icicle-filtered="warn"] > [data-icicle-filter-warning][hidden] {
   overflow-wrap: anywhere !important;
 }
 
+#icicle-account-dialog .icicle-about-warning {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 16px !important;
+  height: 16px !important;
+  margin-left: 6px !important;
+  vertical-align: middle !important;
+  color: #ffd400 !important;
+}
+
+#icicle-account-dialog .icicle-about-warning svg {
+  display: block !important;
+  width: 16px !important;
+  height: 16px !important;
+  flex: none !important;
+  fill: currentColor !important;
+}
+
 #icicle-account-dialog .icicle-about-row__value {
   color: rgb(113 118 123) !important;
   font-family: IcicleChirp, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;

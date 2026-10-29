@@ -8,7 +8,8 @@
     "https://twitter.com/*"
   ],
   "permissions": [
-    "storage"
+    "storage",
+    "clipboardWrite"
   ],
   "content_scripts": [
     {
