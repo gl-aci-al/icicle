@@ -5,12 +5,16 @@
   "description": "A quality-of-life extension for X.",
   "host_permissions": [
     "https://x.com/*",
-    "https://twitter.com/*"
+    "https://twitter.com/*",
+    "https://gateway.umami.is/*"
   ],
   "permissions": [
     "storage",
     "clipboardWrite"
   ],
+  "background": {
+    "service_worker": "background.js"
+  },
   "content_scripts": [
     {
       "matches": [

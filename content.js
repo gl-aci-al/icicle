@@ -54,6 +54,7 @@ const defaults = {
   accentColor: "#1d9bf0",
   customAccentEnabled: true,
   showToasts: true,
+  analyticsEnabled: true,
   twitterLogo: false,
   copyLinkEmbedEnabled: false,
   copyLinkDomain: "fixupx.com",
@@ -334,6 +335,10 @@ shadow.innerHTML = `
         <div class="setting-row"><div class="setting-copy"><label class="setting-name" for="whitelist-bypass-all">Whitelist bypasses media blur too</label><span class="description" id="whitelist-bypass-all-help">When off, whitelisted users still follow the media blur setting.</span></div><label class="switch"><input id="whitelist-bypass-all" type="checkbox" aria-describedby="whitelist-bypass-all-help"><span class="track"></span></label></div>
         <div class="field"><span class="field-label" id="reaction-label">Blocklist reaction</span><span class="description" id="reaction-help">Warn blurs the post, shows the matching reason, and adds a Show post button. Remove hides the post completely.</span><div class="dropdown-wrap"><div class="reaction-dropdown" id="reaction-dropdown"><button class="dropdown-trigger" id="reaction-trigger" type="button" aria-labelledby="reaction-label reaction-value" aria-describedby="reaction-help" aria-haspopup="listbox" aria-expanded="false"><span class="dropdown-value" id="reaction-value">Warn</span><span class="chevron" aria-hidden="true"></span></button><div class="dropdown-menu" id="reaction-menu" role="listbox" aria-labelledby="reaction-label" hidden><button class="dropdown-option" type="button" role="option" data-value="warn" aria-selected="true" tabindex="-1">Blur and warn<span class="option-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 13 4 4L19 7"/></svg></span></button><button class="dropdown-option" type="button" role="option" data-value="remove" aria-selected="false" tabindex="-1">Hide tweet completely<span class="option-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 13 4 4L19 7"/></svg></span></button></div></div></div></div>
       </section>
+      <section class="section" aria-labelledby="privacy-title">
+        <h3 class="section-title" id="privacy-title">Privacy</h3>
+        <div class="setting-row"><div class="setting-copy"><label class="setting-name" for="analytics-enabled">Anonymous analytics</label><span class="description" id="analytics-enabled-help">Sends one basic active-use event per day to Umami. No post content, usernames, browsing URLs, or persistent identifiers are sent. Turn this off to opt out.</span></div><label class="switch"><input id="analytics-enabled" type="checkbox" aria-describedby="analytics-enabled-help"><span class="track"></span></label></div>
+      </section>
       <section class="section" aria-labelledby="transfer-title">
         <h3 class="section-title" id="transfer-title">Import and export</h3>
         <div class="setting-row"><div class="setting-copy"><label class="setting-name" for="include-metadata">Add author and list name</label><span class="description" id="metadata-help">Include optional attribution in exported JSON files.</span></div><label class="switch"><input id="include-metadata" type="checkbox" aria-describedby="metadata-help"><span class="track"></span></label></div>
@@ -581,6 +586,7 @@ function renderSettings() {
   }
   updateAccentSelectionIndicators();
   shadow.querySelector("#show-toasts").checked = settings.showToasts;
+  shadow.querySelector("#analytics-enabled").checked = settings.analyticsEnabled;
   shadow.querySelector("#accent-preview").style.setProperty("--accent-color", settings.accentColor);
   launcher.style.backgroundColor = activeAccent;
   icon.style.filter = contrastingInk(activeAccent) === "#000000" ? "brightness(0)" : "none";
@@ -643,6 +649,13 @@ async function saveSettings() {
   renderSettings();
 }
 
+async function trackAnalytics(eventName) {
+  if (!settings.analyticsEnabled) return;
+  try {
+    await chrome.runtime.sendMessage({ type: "icicle-analytics", event: eventName });
+  } catch {}
+}
+
 function normalizeSettings(value) {
   const incoming = value && typeof value === "object" ? value : {};
   const candidate = incoming.settings && typeof incoming.settings === "object" ? incoming.settings : incoming;
@@ -655,6 +668,7 @@ function normalizeSettings(value) {
     accentColor: color,
     customAccentEnabled: candidate.customAccentEnabled === undefined ? defaults.customAccentEnabled : Boolean(candidate.customAccentEnabled),
     showToasts: candidate.showToasts === undefined ? defaults.showToasts : Boolean(candidate.showToasts),
+    analyticsEnabled: candidate.analyticsEnabled === undefined ? defaults.analyticsEnabled : Boolean(candidate.analyticsEnabled),
     twitterLogo: Boolean(candidate.twitterLogo),
     copyLinkEmbedEnabled: Boolean(candidate.copyLinkEmbedEnabled),
     copyLinkDomain,
@@ -1702,6 +1716,10 @@ shadow.querySelector("#show-toasts").addEventListener("change", async (event) =>
   splash.hidden = !settings.showToasts;
   if (!settings.showToasts) splash.textContent = "";
 });
+shadow.querySelector("#analytics-enabled").addEventListener("change", async (event) => {
+  settings.analyticsEnabled = event.currentTarget.checked;
+  await saveSettings();
+});
 for (const preset of shadow.querySelectorAll(".preset-swatch")) {
   preset.addEventListener("click", async () => {
     if (!settings.customAccentEnabled) return;
@@ -2050,6 +2068,7 @@ async function initialize() {
   const saved = await chrome.storage.local.get(settingsKey);
   settings = normalizeSettings(saved[settingsKey] ?? defaults);
   renderSettings();
+  void trackAnalytics("extension_active");
   applyPageHiders(document, true, true);
   replaceTwitterLogos();
 }
