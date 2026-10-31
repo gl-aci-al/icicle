@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#080808">
+  <title>Download Icicle</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Stack+Sans+Text:wght@400..700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../styles.css">
+  <script src="../script.js" defer></script>
+</head>
+
+<body>
+  <video class="background-video" autoplay muted loop playsinline aria-hidden="true" tabindex="-1"></video>
+  <main class="download-main">
+    <section class="download-flow" aria-label="Download options">
+      <div class="browser-picker">
+        <button class="browser-trigger action-button action-button--primary" type="button" aria-expanded="false"
+          aria-controls="browser-options">
+          <span class="browser-current-icon" aria-hidden="true"><img src="../assets/chrome.svg" alt="" width="24"
+              height="24"></span>
+          <span>Download for <span class="browser-selected">Chrome</span></span>
+          <svg class="browser-chevron" viewBox="0 0 16 16" aria-hidden="true">
+            <path d="m4 6 4 4 4-4"></path>
+          </svg>
+        </button>
+        <nav class="browser-menu" id="browser-options" aria-label="Choose a browser">
+          <a class="browser-option" href="https://github.com/gl-aci-al/icicle/archive/refs/heads/main.zip" data-browser="Chrome"
+            data-tooltip="Works for any chromium-based browser">
+            <img src="../assets/chrome.svg" alt="" width="28" height="28">
+            <span>Chrome</span>
+          </a>
+          <button class="browser-option browser-option--unavailable" type="button" aria-disabled="true"
+            data-browser="Firefox" data-tooltip="Not available yet">
+            <img src="../assets/firefox.svg" alt="" width="28" height="28">
+            <span>Firefox</span>
+          </button>
+        </nav>
+      </div>
+      <a class="action-button source-action" href="https://github.com/gl-aci-al/icicle">View source code</a>
+    </section>
+  </main>
+  <footer class="site-note">Not affiliated with X Corp.</footer>
+</body>
+
+</html>

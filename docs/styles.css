@@ -1,0 +1,790 @@
+:root {
+  color-scheme: dark;
+  --page: #080808;
+  --surface: #111111;
+  --text: #ffffff;
+  --accent: #a8d9ff;
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+::selection {
+  background: #ffffff;
+  color: #080808;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+  scrollbar-width: none;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  display: none;
+}
+
+body {
+  position: relative;
+  min-height: 100svh;
+  margin: 0;
+  background: var(--page);
+  color: var(--text);
+  font-family: "Stack Sans Text", sans-serif;
+}
+
+.background-video {
+  position: fixed;
+  z-index: 0;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  object-fit: cover;
+  object-position: center;
+  pointer-events: none;
+  opacity: 0.46;
+  transform: scale(1.2);
+}
+
+main {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  min-height: 100svh;
+  padding: 7rem clamp(1.5rem, 8vw, 8rem);
+  place-items: center;
+}
+
+.hero {
+  display: grid;
+  justify-items: center;
+  gap: clamp(2rem, 5vh, 3.5rem);
+  width: 100%;
+  text-align: center;
+}
+
+.hero-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.18em;
+  max-width: 100%;
+  margin: 0;
+  font-family: "Faculty Glyphic", serif;
+  font-size: clamp(3rem, 8vw, 10rem);
+  font-weight: 400;
+  letter-spacing: -0.065em;
+  line-height: 0.98;
+  text-align: center;
+}
+
+.title-segment {
+  display: inline-block;
+}
+
+.brand-swap {
+  position: relative;
+  display: inline-grid;
+  width: 0.9em;
+  height: 0.9em;
+  place-items: center;
+  color: var(--text);
+}
+
+.brand-icon {
+  position: absolute;
+  display: block;
+  width: 0.82em;
+  height: 0.82em;
+  color: currentColor;
+  fill: currentColor;
+  opacity: 0;
+  transform: translateY(0.12em) scale(0.88);
+  transition: opacity 240ms var(--ease), transform 240ms var(--ease);
+}
+
+.brand-icon.is-active {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.actions {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.action-button {
+  display: inline-flex;
+  min-height: 3.35rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0.95rem 1.4rem;
+  border: 0;
+  border-radius: 0.65rem;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 1.1rem;
+  line-height: 1;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 240ms var(--ease), color 240ms var(--ease), transform 240ms var(--ease);
+}
+
+.action-button--primary {
+  background: var(--accent);
+  color: #080808;
+}
+
+.action-button:hover,
+.action-button:focus-visible {
+  background: #e5e5e5;
+  color: #111111;
+}
+
+.action-button:active {
+  transform: scale(0.97);
+}
+
+.action-button:focus-visible,
+.browser-option:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.more-menu {
+  position: relative;
+}
+
+.dropdown {
+  position: absolute;
+  z-index: 2;
+  inset-block-start: calc(100% + 0.5rem);
+  inset-inline-end: -23px;
+  display: grid;
+  min-width: 12rem;
+  padding: 0.5rem;
+  border: 0;
+  border-radius: 0.7rem;
+  background: var(--surface);
+  box-shadow: 0 0.75rem 2rem #00000022;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-0.35rem);
+  transition: opacity 220ms var(--ease), transform 220ms var(--ease), visibility 220ms;
+}
+
+.more-menu:hover .dropdown,
+.more-menu:focus-within .dropdown,
+.more-menu.is-open .dropdown {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.dropdown a {
+  display: flex;
+  min-height: 2.8rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.5rem 0.65rem;
+  border-radius: 0.4rem;
+  color: var(--text);
+  font-size: 1rem;
+  text-decoration: none;
+  transition: background-color 220ms var(--ease), color 220ms var(--ease);
+}
+
+.dropdown a:hover,
+.dropdown a:focus-visible {
+  background: color-mix(in srgb, var(--text) 8%, transparent);
+}
+
+.dropdown svg {
+  width: 0.9rem;
+  height: 0.9rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.4;
+  opacity: 0.55;
+  transition: transform 220ms var(--ease), opacity 220ms var(--ease);
+}
+
+.dropdown a:hover svg,
+.dropdown a:focus-visible svg {
+  opacity: 1;
+  transform: translate(0.12rem, -0.12rem);
+}
+
+.download-main {
+  padding-inline: clamp(1.25rem, 6vw, 6rem);
+}
+
+.download-flow {
+  display: grid;
+  justify-items: center;
+  gap: 1.25rem;
+  width: 100%;
+}
+
+.browser-picker {
+  position: relative;
+}
+
+.browser-trigger {
+  gap: 0.75rem;
+}
+
+.browser-current-icon,
+.browser-current-icon img {
+  display: block;
+  width: 1.6rem;
+  height: 1.6rem;
+}
+
+.browser-chevron {
+  width: 0.9rem;
+  height: 0.9rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.7;
+  transition: transform 220ms var(--ease);
+}
+
+.browser-trigger[aria-expanded="true"] .browser-chevron {
+  transform: rotate(180deg);
+}
+
+.browser-menu {
+  position: absolute;
+  z-index: 4;
+  inset-block-start: calc(100% + 0.5rem);
+  inset-inline-start: 50%;
+  display: grid;
+  min-width: 100%;
+  padding: 0.4rem;
+  border: 0;
+  border-radius: 0.75rem;
+  background: var(--surface);
+  box-shadow: 0 0.75rem 2rem #00000026;
+  opacity: 0;
+  visibility: hidden;
+  transform: translate(-50%, -0.35rem);
+  transition: opacity 220ms var(--ease), transform 220ms var(--ease), visibility 220ms;
+}
+
+.browser-picker:hover:not(.is-dismissed) .browser-menu,
+.browser-picker:focus-within:not(.is-dismissed) .browser-menu,
+.browser-picker.is-open .browser-menu {
+  opacity: 1;
+  visibility: visible;
+  transform: translate(-50%, 0);
+}
+
+.browser-option {
+  position: relative;
+  display: flex;
+  min-height: 3.5rem;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.55rem 0.7rem;
+  border: 0;
+  border-radius: 0.45rem;
+  background: transparent;
+  color: var(--text);
+  font: 500 1.05rem/1.2 "Stack Sans Text", sans-serif;
+  text-align: start;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 220ms var(--ease), opacity 220ms var(--ease);
+}
+
+.browser-option:hover,
+.browser-option:focus-visible {
+  background: color-mix(in srgb, var(--text) 9%, transparent);
+}
+
+.browser-option img {
+  display: block;
+  flex: 0 0 2rem;
+  width: 2rem;
+  height: 2rem;
+  filter: grayscale(1) brightness(0) invert(1);
+}
+
+.browser-current-icon img {
+  filter: grayscale(1) brightness(0) invert(1);
+}
+
+.browser-option--unavailable {
+  opacity: 0.48;
+  cursor: not-allowed;
+}
+
+.browser-option--unavailable:hover {
+  background: transparent;
+}
+
+.browser-option[data-tooltip]::after {
+  position: absolute;
+  z-index: 5;
+  inset-inline-start: 50%;
+  inset-block-start: calc(100% + 0.35rem);
+  max-width: calc(100vw - 2rem);
+  padding: 0.55rem 0.75rem;
+  border: 0;
+  border-radius: 0.4rem;
+  background: var(--text);
+  color: var(--page);
+  content: attr(data-tooltip);
+  font: 400 0.85rem/1.3 "Stack Sans Text", sans-serif;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -0.2rem);
+  transition: opacity 220ms var(--ease), transform 220ms var(--ease);
+}
+
+.browser-option[data-tooltip]:hover::after,
+.browser-option[data-tooltip]:focus-visible::after {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.site-note {
+  position: fixed;
+  z-index: 1;
+  inset-inline: 0;
+  inset-block-end: max(1rem, env(safe-area-inset-bottom));
+  color: color-mix(in srgb, var(--text) 56%, transparent);
+  font-size: 0.85rem;
+  text-align: center;
+  pointer-events: none;
+}
+
+.page-home {
+  position: fixed;
+  z-index: 2;
+  inset-block-start: max(1.5rem, env(safe-area-inset-top));
+  inset-inline-start: max(1.5rem, env(safe-area-inset-left));
+  padding: 0.75rem 1rem;
+  border-radius: 0.65rem;
+  color: var(--text);
+  font-size: 1rem;
+  text-decoration: none;
+  transition: background-color 220ms var(--ease), color 220ms var(--ease);
+}
+
+.page-home:hover,
+.page-home:focus-visible {
+  background: color-mix(in srgb, var(--text) 12%, transparent);
+}
+
+.page-home:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.content-main {
+  padding-block: 7rem 6rem;
+}
+
+.content-page {
+  display: grid;
+  justify-items: center;
+  gap: 2.5rem;
+  width: min(100%, 46rem);
+  margin-inline: auto;
+  text-align: center;
+}
+
+.content-title {
+  margin: 0;
+  font-family: "Faculty Glyphic", serif;
+  font-size: clamp(3rem, 8vw, 7rem);
+  font-weight: 400;
+  letter-spacing: -0.055em;
+  line-height: 1;
+}
+
+.page-placeholder {
+  margin: 0;
+  color: color-mix(in srgb, var(--text) 68%, transparent);
+  font-size: 1.25rem;
+}
+
+.about-page {
+  justify-items: stretch;
+  gap: 3rem;
+  width: min(100%, 56rem);
+  text-align: start;
+}
+
+.about-page > .content-title {
+  text-align: center;
+}
+
+.about-copy {
+  display: grid;
+  gap: 2.5rem;
+}
+
+.about-section,
+.about-subsection {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.about-section h2,
+.about-subsection h3,
+.about-section p {
+  margin: 0;
+}
+
+.about-section h2 {
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.about-subsection {
+  gap: 0.7rem;
+  margin-block-start: 0.3rem;
+}
+
+.about-subsection h3 {
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.about-section p {
+  color: color-mix(in srgb, var(--text) 82%, transparent);
+  font-size: 1.1rem;
+  line-height: 1.75;
+}
+
+.about-copy a {
+  position: relative;
+  color: var(--text);
+  text-decoration: none;
+  transition: color 220ms var(--ease);
+}
+
+.about-copy a::after {
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 1px;
+  background: currentColor;
+  content: "";
+  transition: width 0.3s ease;
+}
+
+.about-copy a:hover,
+.about-copy a:focus-visible {
+  color: var(--accent);
+}
+
+.about-copy a:hover::after,
+.about-copy a:focus-visible::after {
+  width: 100%;
+}
+
+.about-tooltip {
+  position: relative;
+  text-decoration: underline dotted color-mix(in srgb, var(--text) 60%, transparent);
+  text-underline-offset: 0.2em;
+  cursor: help;
+}
+
+.about-tooltip::after {
+  position: absolute;
+  z-index: 5;
+  top: calc(100% + 0.45rem);
+  left: 50%;
+  width: max-content;
+  max-width: min(22rem, calc(100vw - 2.5rem));
+  padding: 0.55rem 0.75rem;
+  border-radius: 0.55rem;
+  background: var(--text);
+  box-shadow: 0 0.6rem 1.8rem #00000055;
+  color: var(--page);
+  content: attr(data-tooltip);
+  font-size: 0.9rem;
+  font-weight: 400;
+  line-height: 1.45;
+  text-align: center;
+  white-space: normal;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -0.25rem);
+  transition: opacity 200ms var(--ease), transform 200ms var(--ease);
+}
+
+.about-tooltip:hover::after {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.contact-list {
+  display: grid;
+  gap: 2rem;
+  width: min(100%, 32rem);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  text-align: start;
+}
+
+.contact-item {
+  display: grid;
+  grid-template-columns: 2.5rem 1fr;
+  align-items: center;
+  gap: 1.1rem;
+  min-block-size: 3rem;
+}
+
+.contact-item-copy h2,
+.contact-item-copy p {
+  margin: 0;
+}
+
+.contact-item-copy h2 {
+  margin-block-end: 0.35rem;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.contact-item-copy p,
+.contact-item-copy a {
+  font-size: 1.05rem;
+}
+
+.contact-item-copy a {
+  position: relative;
+  color: var(--text);
+  text-decoration: none;
+  transition: color 220ms var(--ease);
+}
+
+.contact-item-copy a::after {
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 1px;
+  background: currentColor;
+  content: "";
+  transition: width 0.3s ease;
+}
+
+.contact-item-copy a:hover,
+.contact-item-copy a:focus-visible {
+  color: var(--accent);
+}
+
+.contact-item-copy a:hover::after,
+.contact-item-copy a:focus-visible::after {
+  width: 100%;
+}
+
+.contact-response {
+  margin-block-start: 0.35rem !important;
+  color: color-mix(in srgb, var(--text) 62%, transparent);
+  font-size: 0.95rem !important;
+}
+
+.contact-icon,
+.contact-discord {
+  display: block;
+  width: 2.25rem;
+  height: 2.25rem;
+}
+
+.contact-icon--email {
+  width: 2.55rem;
+  height: 2.55rem;
+}
+
+.analytics-toggle {
+  position: fixed;
+  z-index: 3;
+  inset-block-start: max(1.5rem, env(safe-area-inset-top));
+  inset-inline-end: max(1.5rem, env(safe-area-inset-right));
+  padding: 0.55rem 0.8rem;
+  border: 1px solid color-mix(in srgb, var(--text) 16%, transparent);
+  border-radius: 0.55rem;
+  background: color-mix(in srgb, var(--page) 55%, transparent);
+  color: color-mix(in srgb, var(--text) 58%, transparent);
+  font: inherit;
+  font-size: 0.78rem;
+  line-height: 1;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  transition: background-color 220ms var(--ease), color 220ms var(--ease), border-color 220ms var(--ease);
+}
+
+.analytics-toggle:hover,
+.analytics-toggle:focus-visible {
+  border-color: color-mix(in srgb, var(--text) 30%, transparent);
+  background: color-mix(in srgb, var(--text) 8%, transparent);
+  color: var(--text);
+}
+
+.analytics-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.analytics-toggle[aria-pressed="true"] {
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  color: color-mix(in srgb, var(--accent) 82%, var(--text));
+}
+
+.tutorial-steps {
+  display: grid;
+  gap: 1.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: tutorial-step;
+  text-align: start;
+}
+
+.tutorial-step {
+  display: grid;
+  grid-template-columns: 2rem 1fr;
+  gap: 1rem;
+  align-items: start;
+  counter-increment: tutorial-step;
+}
+
+.tutorial-step::before {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid color-mix(in srgb, var(--text) 22%, transparent);
+  border-radius: 50%;
+  color: var(--accent);
+  content: counter(tutorial-step);
+  font-size: 0.9rem;
+  line-height: 1;
+  place-items: center;
+}
+
+.tutorial-step h3,
+.tutorial-step p {
+  margin: 0;
+}
+
+.tutorial-step h3 {
+  margin-block-end: 0.4rem;
+  font-size: 1.15rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.tutorial-step p {
+  color: color-mix(in srgb, var(--text) 82%, transparent);
+  font-size: 1.05rem;
+  line-height: 1.7;
+}
+
+.tutorial-step code {
+  padding: 0.15rem 0.4rem;
+  border-radius: 0.35rem;
+  background: color-mix(in srgb, var(--text) 10%, transparent);
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  font-size: 0.92em;
+}
+
+.tutorial-note {
+  margin: 0;
+  padding: 1rem 1.15rem;
+  border: 1px solid color-mix(in srgb, var(--text) 14%, transparent);
+  border-radius: 0.65rem;
+  background: color-mix(in srgb, var(--surface) 82%, transparent);
+  color: color-mix(in srgb, var(--text) 72%, transparent);
+  font-size: 0.98rem;
+  line-height: 1.65;
+  text-align: start;
+}
+
+@media (max-width: 35rem) {
+  .hero-title {
+    font-size: clamp(2.4rem, 9vw, 3.5rem);
+  }
+
+  .action-button {
+    min-height: 3.1rem;
+    padding: 0.85rem 1.1rem;
+    font-size: 1rem;
+  }
+
+  .content-page {
+    gap: 2rem;
+  }
+
+  .about-page {
+    gap: 2rem;
+  }
+
+  .about-copy {
+    gap: 2rem;
+  }
+
+  .about-section p {
+    font-size: 1rem;
+  }
+
+  .contact-list {
+    gap: 1.5rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .brand-icon,
+  .action-button,
+  .dropdown,
+  .dropdown svg,
+  .browser-chevron,
+  .browser-menu,
+  .browser-option,
+  .browser-option[data-tooltip]::after {
+    transition-duration: 0.01ms;
+  }
+
+  .page-home,
+  .analytics-toggle,
+  .contact-item-copy a,
+  .contact-item-copy a::after,
+  .about-copy a,
+  .about-copy a::after,
+  .about-tooltip::after {
+    transition-duration: 0.01ms;
+  }
+}
