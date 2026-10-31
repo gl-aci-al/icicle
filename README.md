@@ -5,13 +5,13 @@
 <p align="center">Icicle is a Chrome (and soon, Firefox) browser extension meant to give you more control over what you see on X/Twitter.</p>
 
 <p align="center">
-  <a href="https://gl.aci.al/icicle/">Homepage</a> |
-  <a href="https://gl.aci.al/icicle/source">Source</a> |
-  <a href="https://gl.aci.al/icicle/privacy">Privacy</a> |
-  <a href="https://gl.aci.al/icicle/about">About</a> |
-  <a href="https://gl.aci.al/icicle/tutorial">Tutorial</a> |
-  <a href="https://gl.aci.al/contact">Contact</a> |
-  <a href="https://gl.aci.al/">Organization</a>
+  <a href="https://site.gl.aci.al/icicle/">Homepage</a> |
+  <a href="https://site.gl.aci.al/icicle/source">Source</a> |
+  <a href="https://site.gl.aci.al/icicle/privacy">Privacy</a> |
+  <a href="https://site.gl.aci.al/icicle/about">About</a> |
+  <a href="https://site.gl.aci.al/icicle/tutorial">Tutorial</a> |
+  <a href="https://site.gl.aci.al/contact">Contact</a> |
+  <a href="https://site.gl.aci.al/">Organization</a>
 </p>
 
 <p align="center">
