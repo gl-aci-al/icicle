@@ -109,13 +109,13 @@ AI tools have been used as coding aids. The feature ideas, product direction, re
 
 I'm being transparent about that because I think it's better to explain how AI was used than to pretend it wasn't involved.
 
-More about the project and my approach to AI-assisted development is available on the [About page](https://gl.aci.al/icicle/about).
+More about the project and my approach to AI-assisted development is available on the [About page](https://site.gl.aci.al/icicle/about).
 
 ---
 
 ## Privacy
 
-Icicle is intended to help you control what appears on X. Read the [Privacy Policy](https://gl.aci.al/icicle/privacy) for information about the project's data practices.
+Icicle is intended to help you control what appears on X. Read the [Privacy Policy](https://site.gl.aci.al/icicle/privacy) for information about the project's data practices.
 
 ---
 
@@ -123,8 +123,8 @@ Icicle is intended to help you control what appears on X. Read the [Privacy Poli
 
 Found a bug, have a feature idea, or want to share a blocklist?
 
-- **Bug reports & contributions:** Visit the [source page](https://gl.aci.al/icicle/source).
-- **Feature suggestions & other enquiries:** Use the [contact page](https://gl.aci.al/contact).
+- **Bug reports & contributions:** Visit the [source page](https://site.gl.aci.al/icicle/source).
+- **Feature suggestions & other enquiries:** Use the [contact page](https://site.gl.aci.al/contact).
 
 Pull requests are welcome. Please make sure your changes work and serve a clear purpose before submitting them.
 
