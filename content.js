@@ -2,6 +2,7 @@ const settingsKey = "icicleSettings";
 const hiddenToastEasterEgg = "|If you're reading this; you read code instead of just using stuff. Good! Work with us on Icicle if you'd like ;)";
 const toastStrings = ["Intensely Calibrated Inhumanely Created Labrat Experiment", "Agreeable", "The Lie", "But I did kidnap his wife!", "This is the fuck, my soggy friend!", "Oh, and a quarter. Don't forget the quarter..", "Want some jellybeans?", "I AM NOT A MORON!", "//TODO: write toasts", "If the extension doesn't work, it's not my fault.", "I DON'T WANT YOUR LEMONS", "OK I MIGHT WANT YOUR LEMONS, LIFE.", "Do you know why you're here?", "Can you name even one thing? I thought not.", "XCCR", "Bad luck, I guess.", "Take a gamble love exists and do a loving act"];
 const logoClass = "r-4qtqp9 r-yyyyoo r-dnmrzs r-bnwqim r-lrvibr r-m6rgpd r-lrsllp r-1nao33i r-16y2uox r-8kz0gk";
+const logoPathPrefix = "M21.742 21.75";
 const iconUrl = chrome.runtime.getURL("assets/icicle.svg");
 const fontUrls = {
   regular: chrome.runtime.getURL("assets/Chirp-Regular.woff2"),
@@ -59,6 +60,7 @@ const defaults = {
   copyLinkEmbedEnabled: false,
   copyLinkDomain: "fixupx.com",
   customEmbedServices: [],
+  videoCopyDirect: true,
   hidePremium: false,
   hideTrends: false,
   hideWhoToFollow: false,
@@ -287,6 +289,7 @@ shadow.innerHTML = `
           <div id="custom-embed-list" class="custom-embed-list" role="list"></div>
           <span class="description custom-embed-status" id="custom-embed-status" role="status"></span>
         </div>
+        <div class="setting-row"><div class="setting-copy"><label class="setting-name" for="video-copy-direct">Copy video links as direct embeds</label><span class="description" id="video-copy-direct-help">When on, Copy link on a video post uses the d. embed domain. When off or the embed service is disabled, it copies the video CDN link.</span></div><label class="switch"><input id="video-copy-direct" type="checkbox" aria-describedby="video-copy-direct-help"><span class="track"></span></label></div>
       </section>
       <section class="section" aria-labelledby="hiders-title">
         <h3 class="section-title" id="hiders-title">Hide on X</h3>
@@ -594,6 +597,7 @@ function renderSettings() {
   shadow.querySelector("#copy-link-embed-enabled").checked = settings.copyLinkEmbedEnabled;
   updateCopyLinkDropdown();
   renderCustomEmbedServices();
+  shadow.querySelector("#video-copy-direct").checked = settings.videoCopyDirect;
   shadow.querySelector("#hide-premium").checked = settings.hidePremium;
   shadow.querySelector("#hide-trends").checked = settings.hideTrends;
   shadow.querySelector("#hide-who-to-follow").checked = settings.hideWhoToFollow;
@@ -673,6 +677,7 @@ function normalizeSettings(value) {
     copyLinkEmbedEnabled: Boolean(candidate.copyLinkEmbedEnabled),
     copyLinkDomain,
     customEmbedServices,
+    videoCopyDirect: candidate.videoCopyDirect === undefined ? defaults.videoCopyDirect : Boolean(candidate.videoCopyDirect),
     hidePremium: Boolean(candidate.hidePremium),
     hideTrends: Boolean(candidate.hideTrends),
     hideWhoToFollow: Boolean(candidate.hideWhoToFollow),
@@ -728,9 +733,18 @@ function exactClassMatches(root, className) {
   return matches;
 }
 
+function twitterLogoMatches(root) {
+  const matches = new Set(exactClassMatches(root, logoClass));
+  for (const path of queryMutationScope(root, `svg path[d^="${logoPathPrefix}"]`)) {
+    const svg = path.closest("svg");
+    if (svg) matches.add(svg);
+  }
+  return [...matches];
+}
+
 function replaceTwitterLogos(root = document) {
   if (!settings.twitterLogo) return;
-  for (const target of exactClassMatches(root, logoClass)) {
+  for (const target of twitterLogoMatches(root)) {
     const mark = document.createElement("h1");
     mark.dataset.icicleTwitterLogo = "true";
     mark.textContent = "";
@@ -1331,19 +1345,62 @@ document.addEventListener("click", (event) => {
   media.removeAttribute("data-icicle-media-blurred");
 }, true);
 
+const menuTriggerSelector = 'article[data-testid="tweet"] [data-testid="caret"], article[data-testid="tweet"] button[aria-label*="More"], article[data-testid="tweet"] button[aria-label="Share post"], article[data-testid="tweet"] [aria-haspopup="menu"]';
+
+document.addEventListener("pointerdown", (event) => {
+  const target = event.target instanceof Element ? event.target : event.target?.parentElement;
+  const trigger = target?.closest(menuTriggerSelector);
+  if (trigger) rememberTweetMenuTrigger(trigger);
+}, true);
+
 document.addEventListener("click", (event) => {
   const target = event.target instanceof Element ? event.target : event.target?.parentElement;
-  const trigger = target?.closest('article[data-testid="tweet"] [data-testid="caret"], article[data-testid="tweet"] button[aria-label*="More"], article[data-testid="tweet"] [aria-haspopup="menu"]');
-  if (!trigger) return;
-  const tweet = trigger.closest('article[data-testid="tweet"]');
-  if (tweet) lastAccountMenuContext = { trigger, username: tweetIdentity(tweet).username, at: Date.now() };
+  const trigger = target?.closest(menuTriggerSelector);
+  if (trigger) rememberTweetMenuTrigger(trigger);
+}, true);
+
+document.addEventListener("contextmenu", (event) => {
+  const target = event.target instanceof Element ? event.target : event.target?.parentElement;
+  if (!target?.closest('video, [data-testid="videoPlayer"], [data-testid="videoComponent"]')) return;
+  const tweet = target.closest('article[data-testid="tweet"]');
+  const url = (tweet && statusLinkForTweet(tweet)) || (/\/status\/\d+/.test(location.pathname) ? new URL(location.href) : null);
+  if (!url) return;
+  lastCopyLinkSource = { url, at: Date.now() };
+  lastVideoMenuContext = { url, hasVideo: true, at: Date.now() };
+  queueVideoMenuScan();
 }, true);
 
 let lastCopyLinkSource = null;
+let lastVideoMenuContext = null;
+
+function rememberTweetMenuTrigger(trigger) {
+  const tweet = trigger.closest('article[data-testid="tweet"]');
+  if (!tweet) return;
+  lastAccountMenuContext = { trigger, username: tweetIdentity(tweet).username, at: Date.now() };
+  const url = statusLinkForTweet(tweet);
+  if (url) {
+    lastCopyLinkSource = { url, at: Date.now() };
+    lastVideoMenuContext = { url, hasVideo: tweetHasVideo(tweet), at: Date.now() };
+    queueVideoMenuScan();
+  }
+}
+
+let videoMenuScanTimer;
+
+function queueVideoMenuScan() {
+  clearTimeout(videoMenuScanTimer);
+  videoMenuScanTimer = setTimeout(() => {
+    for (const menu of document.querySelectorAll('[role="menu"]')) enhanceVideoContextMenu(menu);
+  }, 100);
+}
 
 function statusLinkForTweet(tweet) {
   const link = [...tweet.querySelectorAll('a[href*="/status/"]')].find((element) => /\/status\/\d+/.test(element.getAttribute("href") ?? ""));
   return link ? new URL(link.href, location.origin) : null;
+}
+
+function tweetHasVideo(tweet) {
+  return Boolean(tweet?.querySelector('[data-testid="videoPlayer"], [data-testid="videoComponent"], video'));
 }
 
 function copyLinkSource() {
@@ -1373,24 +1430,54 @@ async function writeClipboardText(text) {
   }
 }
 
-document.addEventListener("click", (event) => {
-  const target = event.target instanceof Element ? event.target : event.target?.parentElement;
-  const shareButton = target?.closest('article[data-testid="tweet"] button[aria-label="Share post"]');
-  if (!shareButton) return;
-  const tweet = shareButton.closest('article[data-testid="tweet"]');
-  const url = tweet && statusLinkForTweet(tweet);
-  if (url) lastCopyLinkSource = { url, at: Date.now() };
-}, true);
-
 let copyLinkWriteTimer;
 
+function statusId(url) {
+  return url.pathname.match(/\/status\/(\d+)/)?.[1] ?? null;
+}
+
+function directVideoLink(url) {
+  const match = url.pathname.match(/^\/[^/]+\/status\/\d+/);
+  return match ? `https://d.${settings.copyLinkDomain}${match[0]}` : null;
+}
+
+async function copyVideoCdn(source) {
+  try {
+    const media = await resolveVideoMedia(source);
+    await writeClipboardText(media.cdn);
+    showVideoNotice("Copied video CDN link.");
+  } catch {
+    showVideoNotice("Could not find a video for this post.");
+  }
+}
+
+async function copyVideoLink(source) {
+  const href = settings.copyLinkEmbedEnabled && settings.videoCopyDirect ? directVideoLink(source) : null;
+  if (href) {
+    writeClipboardText(href);
+    clearTimeout(copyLinkWriteTimer);
+    copyLinkWriteTimer = setTimeout(() => writeClipboardText(href), 120);
+    showVideoNotice("Copied direct FxEmbed link.");
+    return;
+  }
+  await copyVideoCdn(source);
+}
+
 document.addEventListener("click", (event) => {
-  if (!settings.copyLinkEmbedEnabled) return;
   const target = event.target instanceof Element ? event.target : event.target?.parentElement;
   const item = target?.closest('[role="menuitem"]');
-  if (!item || item.textContent.trim() !== "Copy link") return;
+  if (!item || item.hasAttribute("data-icicle-video-action") || item.textContent.trim() !== "Copy link") return;
   const source = copyLinkSource();
   if (!source) return;
+  const context = shareMenuContext();
+  const menuHasVideo = Boolean(item.closest('[role="menu"]')?.querySelector("[data-icicle-video-item]"));
+  const isVideo = menuHasVideo || Boolean(context?.hasVideo && context.url && statusId(context.url) === statusId(source));
+  if (isVideo) {
+    event.preventDefault();
+    void copyVideoLink(source);
+    return;
+  }
+  if (!settings.copyLinkEmbedEnabled) return;
   source.hostname = settings.copyLinkDomain;
   source.search = "";
   source.hash = "";
@@ -1401,9 +1488,118 @@ document.addEventListener("click", (event) => {
   copyLinkWriteTimer = setTimeout(() => writeClipboardText(href), 120);
 }, true);
 
+const videoMenuIcons = {
+  copy: "M16 1H4a3 3 0 0 0-3 3v12h2V4a1 1 0 0 1 1-1h12V1zm4 4H8a3 3 0 0 0-3 3v14a3 3 0 0 0 3 3h12a3 3 0 0 0 3-3V8a3 3 0 0 0-3-3zm1 17a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v14z",
+  download: "M12 3a1 1 0 0 1 1 1v9.59l2.29-2.3a1 1 0 1 1 1.42 1.42l-4 4a1 1 0 0 1-1.42 0l-4-4a1 1 0 1 1 1.42-1.42l2.29 2.3V4a1 1 0 0 1 1-1zM4 20a1 1 0 0 1 1-1h14a1 1 0 1 1 0 2H5a1 1 0 0 1-1-1z"
+};
+
+function makeShareMenuItem(sampleItem, label, action, pathData) {
+  const item = sampleItem.cloneNode(true);
+  for (const attribute of ["href", "id", "aria-describedby", "aria-expanded", "aria-haspopup", "aria-label", "aria-selected", "data-testid"]) item.removeAttribute(attribute);
+  item.querySelectorAll("[id]").forEach((node) => node.removeAttribute("id"));
+  item.setAttribute("role", "menuitem");
+  item.setAttribute("tabindex", "0");
+  item.setAttribute("data-icicle-video-item", "");
+  item.dataset.icicleVideoAction = action;
+  const svg = item.querySelector("svg");
+  if (svg) svg.innerHTML = `<g><path d="${pathData}"></path></g>`;
+  const labelNode = item.querySelector("span");
+  if (labelNode) labelNode.textContent = label;
+  return item;
+}
+
+function shareMenuContext() {
+  return lastVideoMenuContext && Date.now() - lastVideoMenuContext.at < 15000 ? lastVideoMenuContext : null;
+}
+
+function enhanceVideoContextMenu(menu) {
+  if (!(menu instanceof HTMLElement) || menu.getAttribute("role") !== "menu") return;
+  if (!menu.querySelector('[data-testid="postVideoContextMenuItem"]')) return;
+  const context = shareMenuContext();
+  if (!context?.hasVideo) return;
+  const list = menu.querySelector('[data-testid="Dropdown"]');
+  if (!list || list.querySelector("[data-icicle-video-item]")) return;
+  const sampleItem = list.querySelector('[role="menuitem"]');
+  if (!sampleItem) return;
+  list.append(
+    makeShareMenuItem(sampleItem, "Copy link", "copy-link", videoMenuIcons.copy),
+    makeShareMenuItem(sampleItem, "Download video", "download", videoMenuIcons.download)
+  );
+}
+
+let videoNoticeTimer;
+
+function showVideoNotice(message) {
+  let notice = shadow.querySelector(".icicle-video-notice");
+  if (!notice) {
+    notice = document.createElement("div");
+    notice.className = "icicle-video-notice";
+    notice.setAttribute("role", "status");
+    notice.style.cssText = "position:fixed;left:50%;bottom:24px;transform:translateX(-50%);padding:10px 14px;border:1px solid var(--border);border-radius:999px;background:var(--surface);color:var(--text);box-shadow:0 4px 16px #0003;font-size:13px;opacity:0;pointer-events:none;transition:opacity .15s ease;z-index:2147483647";
+    shadow.append(notice);
+  }
+  notice.textContent = message;
+  notice.style.opacity = "1";
+  clearTimeout(videoNoticeTimer);
+  videoNoticeTimer = setTimeout(() => { notice.style.opacity = "0"; }, 1800);
+}
+
+async function resolveVideoMedia(url) {
+  const match = url.pathname.match(/\/status\/(\d+)/);
+  if (!match) throw new Error("No post id");
+  const response = await chrome.runtime.sendMessage({ type: "icicle-video-resolve", id: match[1] });
+  if (!response?.ok || !response.cdn) throw new Error("No video found");
+  const pathHandle = url.pathname.split("/").filter(Boolean)[0] ?? "i";
+  const author = String(response.author || pathHandle).replace(/^@/, "");
+  return { id: match[1], author, cdn: response.cdn };
+}
+
+async function downloadVideoFile(media) {
+  const filename = `${media.author}-${media.id}.mp4`;
+  try {
+    const response = await chrome.runtime.sendMessage({ type: "icicle-download", url: media.cdn, filename });
+    if (response?.ok) return;
+  } catch { }
+  const anchor = document.createElement("a");
+  anchor.href = media.cdn;
+  anchor.download = filename;
+  anchor.rel = "noopener";
+  document.documentElement.append(anchor);
+  anchor.click();
+  anchor.remove();
+}
+
+async function runVideoMenuAction(action, source) {
+  if (action === "copy-link") {
+    await copyVideoLink(source);
+    return;
+  }
+  if (action !== "download") return;
+  try {
+    const media = await resolveVideoMedia(source);
+    await downloadVideoFile(media);
+    showVideoNotice("Video download started.");
+  } catch {
+    showVideoNotice("Could not find a video for this post.");
+  }
+}
+
+document.addEventListener("click", (event) => {
+  const target = event.target instanceof Element ? event.target : event.target?.parentElement;
+  const item = target?.closest("[data-icicle-video-action]");
+  if (!item) return;
+  const source = shareMenuContext()?.url ?? copyLinkSource();
+  if (!source) return;
+  const menu = item.closest('[role="menu"]');
+  event.preventDefault();
+  event.stopImmediatePropagation();
+  menu?.remove();
+  void runVideoMenuAction(item.dataset.icicleVideoAction, source);
+}, true);
+
 document.addEventListener("keydown", (event) => {
   const target = event.target instanceof Element ? event.target : event.target?.parentElement;
-  const item = target?.closest("[data-icicle-menu-item]");
+  const item = target?.closest("[data-icicle-menu-item], [data-icicle-video-item]");
   if (!item || (event.key !== "Enter" && event.key !== " ")) return;
   event.preventDefault();
   item.click();
@@ -1479,9 +1675,12 @@ function applyPageHiders(root = document, resetBlocklistReveals = false, resetMe
   }
   for (const element of premium) setElementHidden(element, "premium", settings.hidePremium);
 
-  const trends = queryMutationScope(root, "h1, h2")
+  const trends = new Set(queryMutationScope(root, "h1, h2")
     .filter((heading) => heading.textContent.trim().toLowerCase() === "trending now")
-    .map((heading) => sidebarCard(heading, heading.closest("section") ?? heading));
+    .map((heading) => sidebarCard(heading, heading.closest("section") ?? heading)));
+  for (const trend of queryMutationScope(root, '[data-testid="trend"]')) {
+    trends.add(trend.closest("aside, section") ?? sidebarCard(trend, trend));
+  }
   for (const element of trends) setElementHidden(element, "trends", settings.hideTrends);
 
   const suggestions = queryMutationScope(root, 'aside[aria-label="Who to follow"]').map((element) => sidebarCard(element, element));
@@ -1736,6 +1935,10 @@ shadow.querySelector("#twitter-logo").addEventListener("change", async (event) =
 shadow.querySelector("#copy-link-embed-enabled").addEventListener("change", async (event) => {
   settings.copyLinkEmbedEnabled = event.currentTarget.checked;
   updateCopyLinkDropdown();
+  await saveSettings();
+});
+shadow.querySelector("#video-copy-direct").addEventListener("change", async (event) => {
+  settings.videoCopyDirect = event.currentTarget.checked;
   await saveSettings();
 });
 for (const [id, key] of [["hide-premium", "hidePremium"], ["hide-trends", "hideTrends"], ["hide-who-to-follow", "hideWhoToFollow"], ["hide-footer", "hideFooter"], ["hide-chat", "hideChat"], ["hide-grok", "hideGrok"], ["hide-live-on-x", "hideLiveOnX"], ["hide-paid-partnerships", "hidePaidPartnerships"], ["hide-ai-posts", "hideAiPosts"], ["hide-sidebar-logo", "hideSidebarLogo"], ["hide-sidebar-home", "hideSidebarHome"], ["hide-sidebar-explore", "hideSidebarExplore"], ["hide-sidebar-notifications", "hideSidebarNotifications"], ["hide-sidebar-chat", "hideSidebarChat"], ["hide-sidebar-calls", "hideSidebarCalls"], ["hide-sidebar-grok", "hideSidebarGrok"], ["hide-sidebar-history", "hideSidebarHistory"], ["hide-sidebar-creator-studio", "hideSidebarCreatorStudio"], ["hide-sidebar-premium", "hideSidebarPremium"], ["hide-sidebar-profile", "hideSidebarProfile"], ["hide-sidebar-more", "hideSidebarMore"], ["hide-sidebar-post", "hideSidebarPost"]]) {
@@ -2041,7 +2244,10 @@ const observer = new MutationObserver((records) => {
       if (record.removedNodes.length) schedulePageHiders(record.target);
       const parent = record.target instanceof Element ? record.target : record.target.parentElement;
       const menu = parent?.closest('[role="menu"]');
-      if (menu) enhanceAccountMenu(menu);
+      if (menu) {
+        enhanceAccountMenu(menu);
+        enhanceVideoContextMenu(menu);
+      }
     }
     if (record.type === "characterData") schedulePageHiders(record.target);
     if (record.type === "attributes" && ["href", "data-testid"].includes(record.attributeName)) schedulePageHiders(record.target);
@@ -2049,8 +2255,14 @@ const observer = new MutationObserver((records) => {
     if (record.type === "characterData" && record.target.parentElement?.tagName === "STYLE") replaceXBlueInNode(record.target.parentElement);
     for (const node of record.addedNodes) {
       const element = node instanceof Element ? node : node.parentElement;
-      if (element?.matches('[role="menu"]')) enhanceAccountMenu(element);
-      element?.querySelectorAll('[role="menu"]').forEach(enhanceAccountMenu);
+      if (element?.matches('[role="menu"]')) {
+        enhanceAccountMenu(element);
+        enhanceVideoContextMenu(element);
+      }
+      element?.querySelectorAll('[role="menu"]').forEach((menu) => {
+        enhanceAccountMenu(menu);
+        enhanceVideoContextMenu(menu);
+      });
       if (settings.twitterLogo && element) replaceTwitterLogos(element);
       replaceXBlueInNode(element);
     }

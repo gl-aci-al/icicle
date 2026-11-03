@@ -6,11 +6,13 @@
   "host_permissions": [
     "https://x.com/*",
     "https://twitter.com/*",
+    "https://api.fxtwitter.com/*",
     "https://gateway.umami.is/*"
   ],
   "permissions": [
     "storage",
-    "clipboardWrite"
+    "clipboardWrite",
+    "downloads"
   ],
   "background": {
     "service_worker": "background.js"
