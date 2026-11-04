@@ -746,6 +746,7 @@ function twitterLogoMatches(root) {
 function replaceTwitterLogos(root = document) {
   if (!settings.twitterLogo) return;
   for (const target of twitterLogoMatches(root)) {
+    if (target.closest('[data-icicle-twitter-logo="true"]')) continue;
     const mark = target.cloneNode(true);
     mark.dataset.icicleTwitterLogo = "true";
     const paths = mark.querySelectorAll("path");
