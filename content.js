@@ -1527,10 +1527,25 @@ function enhanceVideoContextMenu(menu) {
   if (!list || list.querySelector("[data-icicle-video-item]")) return;
   const sampleItem = list.querySelector('[role="menuitem"]');
   if (!sampleItem) return;
-  list.append(
+  const items = [
     makeShareMenuItem(sampleItem, "Copy link", "copy-link", videoMenuIcons.copy),
     makeShareMenuItem(sampleItem, "Download video", "download", videoMenuIcons.download)
-  );
+  ];
+  list.append(...items);
+  const hoverItem = list.querySelector('[data-testid="copyVideoLinkAtCurrentTimeContextMenuItem"]');
+  const extraHoverClasses = hoverItem
+    ? [...hoverItem.classList].filter((name) => !sampleItem.classList.contains(name))
+    : [];
+  const hoverClasses = extraHoverClasses.length ? extraHoverClasses : ["r-1cuuowz"];
+  for (const item of items) {
+    const setHover = (active) => {
+      for (const name of hoverClasses) item.classList.toggle(name, active);
+    };
+    item.addEventListener("pointerenter", () => setHover(true));
+    item.addEventListener("pointerleave", () => setHover(false));
+    item.addEventListener("focus", () => setHover(true));
+    item.addEventListener("blur", () => setHover(false));
+  }
 }
 
 let videoNoticeTimer;
