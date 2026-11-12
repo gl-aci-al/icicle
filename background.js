@@ -2,9 +2,24 @@ const analyticsEndpoint = "https://gateway.umami.is/api/send";
 const analyticsWebsite = "6a71fb6b-75b0-4136-85cb-6be6f17dae25";
 const analyticsEvents = new Set(["extension_active"]);
 const analyticsLastActiveKey = "icicleAnalyticsLastActive";
-const analyticsThrottleMs = 24 * 60 * 60 * 1000;
+const analyticsThrottleMs = 12 * 60 * 60 * 1000;
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  if (message?.type === "icicle-analytics-permission") {
+    (async () => {
+      try {
+        if (!chrome.runtime.getURL("").startsWith("moz-extension://")) {
+          sendResponse({ allowed: true });
+          return;
+        }
+        const permissions = await chrome.permissions.getAll();
+        sendResponse({ allowed: Boolean(permissions.data_collection?.includes("technicalAndInteraction")) });
+      } catch {
+        sendResponse({ allowed: false });
+      }
+    })();
+    return true;
+  }
   if (message?.type === "icicle-video-resolve") {
     (async () => {
       try {
@@ -43,6 +58,13 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.type !== "icicle-analytics" || !analyticsEvents.has(message.event)) return false;
   (async () => {
     try {
+      if (chrome.runtime.getURL("").startsWith("moz-extension://")) {
+        const permissions = await chrome.permissions.getAll();
+        if (!permissions.data_collection?.includes("technicalAndInteraction")) {
+          sendResponse({ ok: true, skipped: true });
+          return;
+        }
+      }
       const stored = await chrome.storage.local.get(["icicleSettings", analyticsLastActiveKey]);
       if (stored.icicleSettings?.analyticsEnabled === false) {
         sendResponse({ ok: true, skipped: true });

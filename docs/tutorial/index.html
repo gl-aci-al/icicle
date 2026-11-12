@@ -18,7 +18,7 @@
       <article class="content-page about-page">
         <h1 class="content-title">Install Icicle</h1>
         <div class="about-copy">
-          <p class="tutorial-note">Icicle is currently available for Chromium-based browsers only. Firefox support is not available yet. Follow the steps below to install it.</p>
+          <p class="tutorial-note">Icicle supports Chromium-based browsers and Firefox desktop. Firefox support is experimental and may have bugs.</p>
           <section class="about-section">
             <h2>Chrome, Edge, Brave, or Opera</h2>
             <ol class="tutorial-steps">
@@ -60,7 +60,16 @@
               </li>
             </ol>
           </section>
-          <p class="tutorial-note">Firefox is not supported yet. When a Firefox build is ready, it will be listed on the download page.</p>
+          <section class="about-section">
+            <h2>Firefox desktop (experimental)</h2>
+            <p>Firefox uses the same download, with no build step. Until a signed Firefox add-on is available, this is a temporary install that Firefox removes when it closes.</p>
+            <ol class="tutorial-steps">
+              <li class="tutorial-step"><div><h3>Download and unzip Icicle</h3><p>Get Icicle from the <a href="../download/">download page</a> and extract the archive.</p></div></li>
+              <li class="tutorial-step"><div><h3>Open Firefox debugging</h3><p>Open <code>about:debugging#/runtime/this-firefox</code> in Firefox.</p></div></li>
+              <li class="tutorial-step"><div><h3>Load Icicle</h3><p>Choose <code>Load Temporary Add-on</code> and select <code>manifest.json</code> in the extracted folder.</p></div></li>
+              <li class="tutorial-step"><div><h3>Open X</h3><p>Open <a href="https://x.com">x.com</a> and set up your filters.</p></div></li>
+            </ol>
+          </section>
         </div>
       </article>
     </main>

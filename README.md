@@ -2,7 +2,7 @@
 
 <p align="center">X your way, noiseless and filtered.</p>
 
-<p align="center">Icicle is a Chrome (and soon, Firefox) browser extension meant to give you more control over what you see on X/Twitter.</p>
+<p align="center">Icicle is a Chrome and experimental Firefox browser extension meant to give you more control over what you see on X/Twitter.</p>
 
 <p align="center">
   <a href="https://site.gl.aci.al/icicle/">Homepage</a> |
@@ -20,6 +20,12 @@
 
 ---
 
+## Firefox support
+
+Firefox support is experimental and may have bugs. Chrome and Firefox use the same source files, with no build step. Firefox can load Icicle temporarily through `about:debugging`; a permanent install requires a signed Firefox add-on. See the [installation tutorial](https://site.gl.aci.al/icicle/tutorial/).
+
+---
+
 ## Features
 
 ### Make X yours
@@ -29,6 +35,11 @@
 - **Bring back the bird** — Restore the Twitter logo.
 - **FXEmbed links** — Copy links through FXEmbed instances.
 - **Account information** — Access account information through the account dropdown.
+
+### Video tools
+
+- **Download videos** — Download a video from a post's menu.
+- **Copy video links** — Copy a direct embed link through the selected embed service, or copy the video CDN link.
 
 ### Hide on X
 
@@ -89,6 +100,7 @@ Filter content using words, phrases, or regular expressions. One entry per line,
 
 - Blur images and videos until clicked to reveal.
 - Whitelist usernames, with or without the `@` prefix.
+- Add or remove an account from the whitelist directly from its post menu.
 - Configure whether whitelisted accounts bypass media blurring too.
 
 ### Import & export

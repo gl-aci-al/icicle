@@ -11,6 +11,17 @@ const fontUrls = {
   bold: chrome.runtime.getURL("assets/Chirp-Bold.woff2"),
   heavy: chrome.runtime.getURL("assets/Chirp-Heavy.woff2")
 };
+const pageFonts = document.createElement("style");
+pageFonts.textContent = `
+  @font-face{font-family:IcicleChirp;src:url("${fontUrls.regular}") format("woff2");font-style:normal;font-weight:400;font-display:swap}
+  @font-face{font-family:IcicleChirp;src:url("${fontUrls.medium}") format("woff2");font-style:normal;font-weight:500;font-display:swap}
+  @font-face{font-family:IcicleChirp;src:url("${fontUrls.bold}") format("woff2");font-style:normal;font-weight:700;font-display:swap}
+  @font-face{font-family:IcicleChirp;src:url("${fontUrls.heavy}") format("woff2");font-style:normal;font-weight:800;font-display:swap}
+  @font-face{font-family:IcicleChirpHeavy500;src:url("${fontUrls.heavy}") format("woff2");font-style:normal;font-weight:500;font-display:swap}
+  @font-face{font-family:IcicleChirpBold;src:url("${fontUrls.bold}") format("woff2");font-style:normal;font-weight:700;font-display:swap}
+  @font-face{font-family:IcicleChirpRegularFace;src:url("${fontUrls.regular}") format("woff2");font-style:normal;font-weight:400;font-display:swap}
+`;
+document.documentElement.append(pageFonts);
 const builtInCopyLinkDomains = new Set(["fixupx.com", "fxtwitter.com", "vxtwitter.com"]);
 const copyLinkDomainLabels = { "fixupx.com": "FixupX", "fxtwitter.com": "FxTwitter", "vxtwitter.com": "VxTwitter" };
 
@@ -341,7 +352,7 @@ shadow.innerHTML = `
       </section>
       <section class="section" aria-labelledby="privacy-title">
         <h3 class="section-title" id="privacy-title">Privacy</h3>
-        <div class="setting-row"><div class="setting-copy"><label class="setting-name" for="analytics-enabled">Anonymous analytics</label><span class="description" id="analytics-enabled-help">Sends one basic active-use event per day to Umami. No post content, usernames, browsing URLs, or persistent identifiers are sent. Turn this off to opt out.</span></div><label class="switch"><input id="analytics-enabled" type="checkbox" aria-describedby="analytics-enabled-help"><span class="track"></span></label></div>
+        <div class="setting-row"><div class="setting-copy"><label class="setting-name" for="analytics-enabled">Anonymous analytics</label><span class="description" id="analytics-enabled-help">Sends an active-use event when you open X, then at most once every 12 hours when you open it again. No post content, usernames, browsing URLs, or persistent identifiers are sent. Turn this off to opt out.</span></div><label class="switch"><input id="analytics-enabled" type="checkbox" aria-describedby="analytics-enabled-help"><span class="track"></span></label></div>
       </section>
       <section class="section" aria-labelledby="transfer-title">
         <h3 class="section-title" id="transfer-title">Import and export</h3>
@@ -365,6 +376,7 @@ const icon = shadow.querySelector(".launcher img");
 const status = shadow.querySelector(".status");
 const splash = shadow.querySelector("#icicle-splash");
 let settings = { ...defaults };
+let analyticsPermissionGranted = true;
 const replacedTwitterLogos = new WeakMap();
 const streamerMaskedTexts = new Map();
 
@@ -590,7 +602,11 @@ function renderSettings() {
   }
   updateAccentSelectionIndicators();
   shadow.querySelector("#show-toasts").checked = settings.showToasts;
-  shadow.querySelector("#analytics-enabled").checked = settings.analyticsEnabled;
+  shadow.querySelector("#analytics-enabled").checked = settings.analyticsEnabled && analyticsPermissionGranted;
+  shadow.querySelector("#analytics-enabled").disabled = !analyticsPermissionGranted;
+  shadow.querySelector("#analytics-enabled-help").textContent = analyticsPermissionGranted
+    ? "Sends an active-use event when you open X, then at most once every 12 hours when you open it again. No post content, usernames, browsing URLs, or persistent identifiers are sent. Turn this off to opt out."
+    : "Analytics are off. To enable them in Firefox, allow optional technical and interaction data in the add-on's Permissions and data settings, then reopen X.";
   shadow.querySelector("#accent-preview").style.setProperty("--accent-color", settings.accentColor);
   launcher.style.backgroundColor = activeAccent;
   icon.style.filter = contrastingInk(activeAccent) === "#000000" ? "brightness(0)" : "none";
@@ -2300,6 +2316,12 @@ async function initialize() {
   applyTheme();
   const saved = await chrome.storage.local.get(settingsKey);
   settings = normalizeSettings(saved[settingsKey] ?? defaults);
+  try {
+    const permission = await chrome.runtime.sendMessage({ type: "icicle-analytics-permission" });
+    analyticsPermissionGranted = permission?.allowed === true;
+  } catch {
+    analyticsPermissionGranted = false;
+  }
   renderSettings();
   void trackAnalytics("extension_active");
   applyPageHiders(document, true, true);
